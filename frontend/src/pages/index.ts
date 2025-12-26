@@ -1,0 +1,9 @@
+export { HomePage } from './HomePage';
+export { ApplicantsPage } from './ApplicantsPage';
+export { ApplicantDetailPage } from './ApplicantDetailPage';
+export { NewApplicantPage } from './NewApplicantPage';
+export { SearchPage } from './SearchPage';
+export { StatsPage } from './StatsPage';
+export { DocumentsPage } from './DocumentsPage';
+export { LoginPage } from './LoginPage';
+export { WalletPage } from './WalletPage';
