@@ -1,0 +1,28 @@
+
+services:
+  apply-srbiau:
+    image: apply-srbiau
+    ports:
+      - 8888:8888
+    environment:
+      POSTGRES_USER:  ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    env_file:
+      - .env
+  database:
+    image: "postgres:latest"
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER:  ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      PGDATA: /data/postgres
+    env_file:
+      - .env
+    volumes:
+      - db:/data/postgres
+
+volumes:
+  db:
