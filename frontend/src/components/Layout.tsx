@@ -12,6 +12,7 @@ import {
   Wallet,
   User,
   Coins,
+  LayoutDashboard,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -25,6 +26,7 @@ export function Layout({ children }: LayoutProps) {
   
   const navItems = [
     { to: '/', icon: GraduationCap, label: 'خانه' },
+    ...(user ? [{ to: '/dashboard', icon: LayoutDashboard, label: 'داشبورد' }] : []),
     { to: '/applicants', icon: Users, label: 'متقاضیان' },
     { to: '/search', icon: Search, label: 'جستجو' },
     { to: '/stats', icon: BarChart3, label: 'آمار' },

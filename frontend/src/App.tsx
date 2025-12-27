@@ -12,6 +12,9 @@ import {
   DocumentsPage,
   LoginPage,
   WalletPage,
+  DashboardPage,
+  AddProgramPage,
+  ProgramDetailPage,
 } from './pages';
 import { Spinner } from './components/ui';
 
@@ -62,6 +65,30 @@ function AppRoutes() {
         <Route path="/search" element={<SearchPage />} />
         <Route path="/stats" element={<StatsPage />} />
         <Route path="/documents" element={<DocumentsPage />} />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <DashboardPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard/programs/new"
+          element={
+            <ProtectedRoute>
+              <AddProgramPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard/programs/:id"
+          element={
+            <ProtectedRoute>
+              <ProgramDetailPage />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/wallet"
           element={
