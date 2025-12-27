@@ -32,6 +32,23 @@ export type ApplicationStatus =
 
 export type DegreeLevel = 'masters' | 'phd' | 'mba' | 'postdoc';
 
+// Tracker
+export type TrackedProgramStatus =
+  | 'researching'
+  | 'preparing'
+  | 'submitted'
+  | 'interview'
+  | 'accepted'
+  | 'rejected'
+  | 'waitlisted';
+
+export type TrackedProgramPriority = 'reach' | 'target' | 'safety';
+
+export interface ChecklistItem {
+  name: string;
+  done: boolean;
+}
+
 // Applicant
 export interface Applicant {
   id: number;
@@ -296,4 +313,47 @@ export interface CourseAccessStatus {
   can_view: boolean;
   remaining_views: number | string;
   is_authenticated: boolean;
+}
+
+// Tracked Program (personal dashboard)
+export interface TrackedProgram {
+  id: number;
+  user_id: number;
+  course_id: number | null;
+  custom_program_name: string | null;
+  university_name: string;
+  country: string;
+  deadline: string | null;
+  status: TrackedProgramStatus;
+  submitted_date: string | null;
+  result_date: string | null;
+  notes: string | null;
+  priority: TrackedProgramPriority;
+  documents_checklist: ChecklistItem[] | null;
+  created_at: string;
+  updated_at: string;
+  course_name?: string | null;
+}
+
+export interface TrackedProgramCreate {
+  course_id?: number | null;
+  custom_program_name?: string | null;
+  university_name?: string | null;
+  country?: string | null;
+  deadline?: string | null;
+  status?: TrackedProgramStatus;
+  submitted_date?: string | null;
+  result_date?: string | null;
+  notes?: string | null;
+  priority?: TrackedProgramPriority;
+  documents_checklist?: ChecklistItem[] | null;
+}
+
+export interface TrackedProgramUpdate extends TrackedProgramCreate {}
+
+export interface TrackerStats {
+  total: number;
+  by_status: Record<string, number>;
+  upcoming_deadlines: number;
+  window_days: number;
 }

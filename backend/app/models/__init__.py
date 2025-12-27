@@ -69,6 +69,15 @@ from app.models.course import (
     CourseUpdate,
 )
 
+from app.models.tracked_program import (
+    TrackedProgram,
+    TrackedProgramStatus,
+    TrackedProgramPriority,
+    TrackedProgramCreate,
+    TrackedProgramRead,
+    TrackedProgramUpdate,
+)
+
 __all__ = [
     # User & Auth
     "User",
@@ -129,4 +138,11 @@ __all__ = [
     "CourseRead",
     "CourseReadWithUniversity",
     "CourseUpdate",
+    # Tracker
+    "TrackedProgram",
+    "TrackedProgramStatus",
+    "TrackedProgramPriority",
+    "TrackedProgramCreate",
+    "TrackedProgramRead",
+    "TrackedProgramUpdate",
 ]

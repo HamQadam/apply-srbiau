@@ -5,6 +5,7 @@ from enum import Enum
 
 if TYPE_CHECKING:
     from app.models.applicant import Applicant
+    from app.models.tracked_program import TrackedProgram
 
 
 class UserRole(str, Enum):
@@ -55,7 +56,8 @@ class User(UserBase, table=True):
         back_populates="subscriber",
         sa_relationship_kwargs={"foreign_keys": "[Subscription.subscriber_id]"}
     )
-
+    # Personal application tracker (private, value-first entry point)
+    tracked_programs: list["TrackedProgram"] = Relationship(back_populates="user")
 
 class UserCreate(SQLModel):
     phone: str
