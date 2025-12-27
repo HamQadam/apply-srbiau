@@ -31,7 +31,8 @@ import type { ApplicantFull } from '../types';
 
 export function ApplicantDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const { user } = useAuth();
+  // const { user } = useAuth();
+  useAuth();
   const [hasAccess, setHasAccess] = useState<boolean | null>(null);
   
   // First check access

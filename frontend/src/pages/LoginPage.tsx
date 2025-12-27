@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Phone, KeyRound, ArrowRight, Loader2 } from 'lucide-react';
+import { Phone, KeyRound, ArrowRight} from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { authApi } from '../api/auth';
 import { Card, CardContent, CardHeader, Button, Input } from '../components/ui';

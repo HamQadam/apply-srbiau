@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.v1 import applicants, languages, documents, activities, applications, auth, wallet, subscriptions
+from app.api.v1 import applicants, languages, documents, activities, applications, auth, wallet, subscriptions, universities, courses
 
 router = APIRouter(prefix="/api/v1")
 
@@ -21,3 +21,7 @@ router.include_router(languages.search_router)
 router.include_router(documents.search_router)
 router.include_router(activities.search_router)
 router.include_router(applications.search_router)
+
+# University and Course routes
+router.include_router(universities.router)
+router.include_router(courses.router)

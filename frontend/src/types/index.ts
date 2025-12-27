@@ -160,6 +160,7 @@ export interface ExtracurricularActivityCreate {
 export interface Application {
   id: number;
   applicant_id: number;
+  university_id?: number;  // NEW - optional for backward compatibility
   university_name: string;
   country: string;
   city: string | null;
@@ -184,8 +185,9 @@ export interface Application {
 }
 
 export interface ApplicationCreate {
-  university_name: string;
-  country: string;
+  university_id?: number;  // NEW - can use this OR university_name
+  university_name?: string;  // Make optional
+  country?: string;  // Make optional
   city?: string;
   program_name: string;
   department?: string;
@@ -221,4 +223,77 @@ export interface CountryStat {
   total_applications: number;
   accepted: number;
   with_scholarship: number;
+}
+
+// University
+export interface University {
+  id: number;
+  name: string;
+  country: string;
+  city: string | null;
+  website: string | null;
+  logo_url: string | null;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UniversityCreate {
+  name: string;
+  country: string;
+  city?: string;
+  website?: string;
+  logo_url?: string;
+  description?: string;
+}
+
+export interface UniversityWithCourses extends University {
+  courses: Course[];
+}
+
+// Course
+export interface Course {
+  id: number;
+  university_id: number;
+  course_name: string;
+  department: string | null;
+  degree_level: DegreeLevel;
+  website_url: string | null;
+  description: string | null;
+  language_requirements: string | null;
+  minimum_gpa: string | null;
+  application_deadline: string | null;
+  tuition_fees: string | null;
+  duration_months: number | null;
+  scholarships_available: boolean;
+  notes: string | null;
+  view_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CourseCreate {
+  university_id: number;
+  course_name: string;
+  department?: string;
+  degree_level: DegreeLevel;
+  website_url?: string;
+  description?: string;
+  language_requirements?: string;
+  minimum_gpa?: string;
+  application_deadline?: string;
+  tuition_fees?: string;
+  duration_months?: number;
+  scholarships_available?: boolean;
+  notes?: string;
+}
+
+export interface CourseWithUniversity extends Course {
+  university: University;
+}
+
+export interface CourseAccessStatus {
+  can_view: boolean;
+  remaining_views: number | string;
+  is_authenticated: boolean;
 }

@@ -5,6 +5,7 @@ from enum import Enum
 
 if TYPE_CHECKING:
     from app.models.applicant import Applicant
+    from app.models.university import University
 
 
 class ApplicationStatus(str, Enum):
@@ -27,9 +28,17 @@ class DegreeLevel(str, Enum):
 
 class ApplicationBase(SQLModel):
     """A single program application."""
-    # Target program info
-    university_name: str = Field(max_length=200, index=True)
-    country: str = Field(max_length=100, index=True)
+    # Target program info - new FK-based approach
+    #university_id: Optional[int] = Field(default=None, index=True, description="Foreign key to universities table")
+    university_id: Optional[int] = Field(
+        default=None,
+        foreign_key="universities.id",
+        index=True,
+        description="Foreign key to universities table",
+    )
+    # Legacy fields - kept for backward compatibility during migration
+    university_name: Optional[str] = Field(default=None, max_length=200, index=True)
+    country: Optional[str] = Field(default=None, max_length=100, index=True)
     city: Optional[str] = Field(default=None, max_length=100)
     program_name: str = Field(max_length=300)
     department: Optional[str] = Field(default=None, max_length=200)
@@ -63,13 +72,15 @@ class ApplicationBase(SQLModel):
 class Application(ApplicationBase, table=True):
     """Database table for applications."""
     __tablename__ = "applications"
-    
+
     id: Optional[int] = Field(default=None, primary_key=True)
     applicant_id: int = Field(foreign_key="applicants.id", index=True)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
-    
+
+    # Relationships
     applicant: Optional["Applicant"] = Relationship(back_populates="applications")
+    university: Optional["University"] = Relationship(back_populates="applications")
 
 
 class ApplicationCreate(ApplicationBase):
@@ -89,6 +100,7 @@ class ApplicationRead(ApplicationBase):
 
 class ApplicationUpdate(SQLModel):
     """Schema for updating application."""
+    university_id: Optional[int] = None
     university_name: Optional[str] = None
     country: Optional[str] = None
     city: Optional[str] = None

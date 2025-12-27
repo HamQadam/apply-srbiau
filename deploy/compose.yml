@@ -1,8 +1,8 @@
 services:
-  apply-srbiau:
-    build: .
-    #ports:
-    #  - "8888:8888"
+  api:
+    build:
+      context: ../backend
+    container_name: apply-api
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -10,25 +10,34 @@ services:
       POSTGRES_HOST: database
       POSTGRES_PORT: 5432
     env_file:
-      - .env
+      - ../backend/.env
     volumes:
       - uploads:/app/uploads
     depends_on:
       database:
         condition: service_healthy
     restart: unless-stopped
+    expose:
+      - "8888"   # internal only
+
+  frontend:
+    build:
+      context: ../frontend
+    container_name: apply-frontend
+    restart: unless-stopped
+    expose:
+      - "80"     # internal only
 
   database:
-    image: "postgres:16"
-    ports:
-      - "5432:5432"
+    image: postgres:16
+    container_name: apply-db
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
       PGDATA: /data/postgres
     env_file:
-      - .env
+      - ../backend/.env
     volumes:
       - db:/data/postgres
     healthcheck:
@@ -36,6 +45,20 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    container_name: apply-edge
+    depends_on:
+      - api
+      - frontend
+    ports:
+      - "80:80"
+      # later when you add TLS:
+      # - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
     restart: unless-stopped
 
 volumes:

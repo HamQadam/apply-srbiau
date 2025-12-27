@@ -12,6 +12,13 @@ import type {
   ApplicationCreate,
   UniversityStat,
   CountryStat,
+  University,
+  UniversityCreate,
+  UniversityWithCourses,
+  Course,
+  CourseCreate,
+  CourseWithUniversity,
+  CourseAccessStatus,
 } from '../types';
 
 // Applicants
@@ -174,4 +181,62 @@ export const applicationsApi = {
     const query = year ? `?year=${year}` : '';
     return api.get<CountryStat[]>(`/applications/stats/by-country${query}`);
   },
+};
+
+// Universities
+export const universitiesApi = {
+  list: (params?: { name?: string; country?: string; city?: string; skip?: number; limit?: number }) => {
+    const query = new URLSearchParams();
+    if (params?.name) query.set('name', params.name);
+    if (params?.country) query.set('country', params.country);
+    if (params?.city) query.set('city', params.city);
+    if (params?.skip) query.set('skip', String(params.skip));
+    if (params?.limit) query.set('limit', String(params.limit));
+    const qs = query.toString();
+    return api.get<University[]>(`/universities/${qs ? `?${qs}` : ''}`);
+  },
+
+  get: (id: number) => api.get<University>(`/universities/${id}`),
+
+  getWithCourses: (id: number) => api.get<UniversityWithCourses>(`/universities/${id}/with-courses`),
+
+  create: (data: UniversityCreate) => api.post<University>('/universities/', data),
+
+  update: (id: number, data: Partial<UniversityCreate>) =>
+    api.patch<University>(`/universities/${id}`, data),
+
+  delete: (id: number) => api.delete(`/universities/${id}`),
+};
+
+// Courses
+export const coursesApi = {
+  list: (params?: {
+    university_id?: number;
+    degree_level?: string;
+    country?: string;
+    course_name?: string;
+    skip?: number;
+    limit?: number;
+  }) => {
+    const query = new URLSearchParams();
+    if (params?.university_id) query.set('university_id', String(params.university_id));
+    if (params?.degree_level) query.set('degree_level', params.degree_level);
+    if (params?.country) query.set('country', params.country);
+    if (params?.course_name) query.set('course_name', params.course_name);
+    if (params?.skip) query.set('skip', String(params.skip));
+    if (params?.limit) query.set('limit', String(params.limit));
+    const qs = query.toString();
+    return api.get<CourseWithUniversity[]>(`/courses/${qs ? `?${qs}` : ''}`);
+  },
+
+  get: (id: number) => api.get<CourseWithUniversity>(`/courses/${id}`),
+
+  checkAccess: () => api.get<CourseAccessStatus>('/courses/check-access'),
+
+  create: (data: CourseCreate) => api.post<Course>('/courses/', data),
+
+  update: (id: number, data: Partial<CourseCreate>) =>
+    api.patch<Course>(`/courses/${id}`, data),
+
+  delete: (id: number) => api.delete(`/courses/${id}`),
 };

@@ -54,6 +54,20 @@ from app.models.application import (
     ApplicationRead,
     ApplicationUpdate,
 )
+from app.models.university import (
+    University,
+    UniversityCreate,
+    UniversityRead,
+    UniversityReadWithCourses,
+    UniversityUpdate,
+)
+from app.models.course import (
+    Course,
+    CourseCreate,
+    CourseRead,
+    CourseReadWithUniversity,
+    CourseUpdate,
+)
 
 __all__ = [
     # User & Auth
@@ -103,4 +117,16 @@ __all__ = [
     "ApplicationCreate",
     "ApplicationRead",
     "ApplicationUpdate",
+    # University
+    "University",
+    "UniversityCreate",
+    "UniversityRead",
+    "UniversityReadWithCourses",
+    "UniversityUpdate",
+    # Course
+    "Course",
+    "CourseCreate",
+    "CourseRead",
+    "CourseReadWithUniversity",
+    "CourseUpdate",
 ]
