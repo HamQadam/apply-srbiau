@@ -168,8 +168,9 @@ def seed():
             select(func.count()).select_from(University)
         ).one()
         if existing and existing > 0:
+            print("Database already seeded, skipping...")
+            return
 
-        
         print("Seeding universities...")
         uni_ids = {}
         for uni_data in UNIVERSITIES:

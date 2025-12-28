@@ -6,3 +6,6 @@ seed:
 
 log:
 	cd deploy; docker compose logs -f
+
+psql:
+	docker exec -it apply-db psql -U apply_user apply_db
