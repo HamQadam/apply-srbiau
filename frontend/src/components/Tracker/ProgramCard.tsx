@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import type { TrackedProgram, ApplicationStatus } from '../../types';
+import type { TrackedProgram } from '../../types';
 import { STATUS_LABELS, STATUS_COLORS, PRIORITY_LABELS, PRIORITY_COLORS } from '../../types';
 
 interface ProgramCardProps {

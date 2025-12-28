@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { courseApi, universityApi, trackerApi } from '../../api/services';
 import { useAuth } from '../../contexts/AuthContext';
-import type { Course, DegreeLevel, TeachingLanguage } from '../../types';
+import type { Course, DegreeLevel } from '../../types';
 
 export function ExplorePage() {
   const navigate = useNavigate();

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { trackerApi } from '../../api/services';
-import type { TrackedProgram, ChecklistItem, ApplicationStatus } from '../../types';
+import type { TrackedProgram,  ApplicationStatus } from '../../types';
 import { STATUS_LABELS, STATUS_COLORS, PRIORITY_LABELS, PRIORITY_COLORS } from '../../types';
 
 export function ProgramDetailPage() {
@@ -311,7 +311,7 @@ export function ProgramDetailPage() {
       </div>
       
       {/* Share Journey Prompt - Show if accepted or rejected */}
-      {(program.status === 'accepted' || program.status === 'rejected') && !program.shared_as_experience && (
+      {(program.status === 'accepted' || program.status === 'rejected') && !Boolean(program.shared_as_experience) && (
         <div className="mt-6 bg-gradient-to-r from-amber-50 to-yellow-50 rounded-xl border border-amber-200 p-6">
           <div className="flex items-start space-x-4">
             <span className="text-4xl">

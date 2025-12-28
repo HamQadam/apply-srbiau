@@ -91,6 +91,10 @@ export interface TrackedProgram {
   deadline: string | null;
   submitted_date: string | null;
   result_date: string | null;
+  // Sharing state (experience platform)
+  shared_as_experience?: boolean;
+  shared_experience_id?: number | null;
+  shared_at?: string | null;
   notes: string | null;
   document_checklist: ChecklistItem[] | null;
   application_portal_url: string | null;
@@ -107,6 +111,7 @@ export interface TrackedProgram {
   university_ranking_qs?: number | null;
   degree_level?: string;
   program_deadline?: string | null;
+  
 }
 
 export interface ChecklistItem {
@@ -185,6 +190,9 @@ export interface UpdateTrackedProgramRequest {
   application_id?: string;
   scholarship_offered?: boolean;
   scholarship_amount?: number;
+  shared_as_experience?: boolean;
+  shared_experience_id?: number | null;
+  shared_at?: string | null;
 }
 
 // Display helpers
