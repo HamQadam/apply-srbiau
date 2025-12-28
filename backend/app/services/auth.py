@@ -3,7 +3,7 @@ import random
 import string
 from datetime import datetime, timedelta
 from typing import Optional
-import jwt
+from jose import jwt, JWTError
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlmodel import Session, select
@@ -71,9 +71,16 @@ def create_access_token(user_id: int) -> str:
 def decode_token(token: str) -> Optional[int]:
     """Decode JWT token and return user_id."""
     try:
-        payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
-        return int(payload["sub"])
-    except (jwt.ExpiredSignatureError, jwt.InvalidTokenError, KeyError, ValueError):
+        payload = jwt.decode(
+            token,
+            settings.jwt_secret,
+            algorithms=[settings.jwt_algorithm],
+        )
+        sub = payload.get("sub")
+        if sub is None:
+            return None
+        return int(sub)
+    except (JWTError, ValueError, TypeError):
         return None
 
 
