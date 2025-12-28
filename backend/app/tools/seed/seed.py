@@ -1,9 +1,9 @@
 """Seed database with sample universities and courses."""
 import sys
 sys.path.insert(0, "/app")
-
+from sqlalchemy import func, text 
 from datetime import date
-from sqlmodel import Session
+from sqlmodel import Session, select
 from app.database import engine
 from app.models import (
     University, Course, CourseLanguageRequirement,
@@ -165,11 +165,10 @@ def seed():
     with Session(engine) as session:
         # Check if already seeded
         existing = session.exec(
-            "SELECT COUNT(*) FROM universities"
+            select(func.count()).select_from(University)
         ).one()
-        if existing > 0:
-            print("Database already seeded, skipping...")
-            return
+        if existing and existing > 0:
+
         
         print("Seeding universities...")
         uni_ids = {}
