@@ -8,9 +8,8 @@ class Settings(BaseSettings):
     daad_base_url: str = "https://www2.daad.de/deutschland/studienangebote/international-programmes/api/solr"
     daad_lang: str = "en"
     daad_rps: float = 2.0
-    daad_page_size: int = 100  # fetch pages of 100 from DAAD
+    daad_page_size: int = 100
 
-    # Degree code mapping (DAAD side)
     daad_degree_bachelor: int = 1
     daad_degree_master: int = 2
     daad_degree_phd: int = 3
@@ -23,9 +22,3 @@ class Settings(BaseSettings):
     course_bulk_path: str | None = None  # e.g. "/api/v1/admin/courses:bulk"
 
     # Batching / runtime
-    batch_size: int = 50
-    concurrency: int = 10
-    checkpoint_path: str = ".state/daad_checkpoint.json"
-
-    # Behavior
-    dry_run: bool = False
