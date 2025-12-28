@@ -1,11 +1,10 @@
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm AS builder
 WORKDIR /app
 
-COPY pyproject.toml ./
-# If you have uv.lock, copy it too (recommended)
-# COPY uv.lock ./
+# copy BOTH so dependency resolution/cache is correct
+COPY pyproject.toml uv.lock ./
 
-RUN uv sync --no-dev
+RUN uv sync --frozen --no-dev
 
 COPY daad_ingestor ./daad_ingestor
 
@@ -18,4 +17,4 @@ COPY --from=builder /app/daad_ingestor /app/daad_ingestor
 ENV PATH="/app/.venv/bin:$PATH"
 ENV PYTHONUNBUFFERED=1
 
-CMD ["daad-ingest", "ingest"]
+CMD ["python", "-m", "daad_ingestor.cli", "ingest"]

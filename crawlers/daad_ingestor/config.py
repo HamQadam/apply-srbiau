@@ -15,11 +15,6 @@ class Settings(BaseSettings):
     daad_degree_master: int = 2
     daad_degree_phd: int = 3
 
-    # Ghadam API
-    ghadam_base_url: str = Field(..., description="e.g. https://api.yourdomain.com")
-    ghadam_admin_token: str = Field(..., description="Bearer token for admin write endpoints")
-    ghadam_timeout_s: float = 30.0
-
     # Write endpoints (override if your routes differ)
     uni_create_path: str = "/api/v1/admin/universities"
     uni_update_path_tpl: str = "/api/v1/admin/universities/{id}"

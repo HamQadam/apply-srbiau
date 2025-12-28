@@ -28,6 +28,26 @@ services:
     expose:
       - "80"     # internal only
 
+  daad-ingestor:
+    build:
+      context: ../crawlers
+    container_name: daad-ingestor
+    env_file:
+      - ../backend/.env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@database:5432/${POSTGRES_DB}
+      CHECKPOINT_PATH: /state/daad_checkpoint.json
+      BATCH_SIZE: "50"
+      DAAD_PAGE_SIZE: "100"
+      DB_POOL_MAX: "10"
+    depends_on:
+      database:
+        condition: service_healthy
+    volumes:
+      - daad_state:/state
+    restart: "no"
+    command: ["python", "-m", "daad_ingestor.cli", "ingest"]
+
   database:
     image: postgres:16
     container_name: apply-db
@@ -64,3 +84,4 @@ services:
 volumes:
   db:
   uploads:
+  daad_state:
