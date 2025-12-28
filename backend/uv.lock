@@ -57,7 +57,7 @@ wheels = [
 ]
 
 [[package]]
-name = "apply-srbiau"
+name = "apply"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
