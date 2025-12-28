@@ -1,132 +1,108 @@
 import { Link } from 'react-router-dom';
-import { CalendarDays, Trash2, ArrowUpRight } from 'lucide-react';
-import type { TrackedProgram, TrackedProgramPriority, TrackedProgramStatus } from '../../types';
-import { Badge, Button, Card, CardContent } from '../ui';
-import { StatusDropdown } from './StatusDropdown';
+import type { TrackedProgram, ApplicationStatus } from '../../types';
+import { STATUS_LABELS, STATUS_COLORS, PRIORITY_LABELS, PRIORITY_COLORS } from '../../types';
 
-function parseLocalDate(dateStr: string): Date {
-  const parts = dateStr.split('-').map((x) => Number(x));
-  if (parts.length === 3 && parts.every((n) => Number.isFinite(n))) {
-    return new Date(parts[0], parts[1] - 1, parts[2]);
-  }
-  return new Date(dateStr);
-}
-
-function formatDate(dateStr: string) {
-  try {
-    const d = parseLocalDate(dateStr);
-    return new Intl.DateTimeFormat('fa-IR', { year: 'numeric', month: 'short', day: 'numeric' }).format(d);
-  } catch {
-    return dateStr;
-  }
-}
-
-function daysUntil(dateStr: string) {
-  const now = new Date();
-  const target = parseLocalDate(dateStr);
-  const diff = target.getTime() - now.getTime();
-  return Math.ceil(diff / (1000 * 60 * 60 * 24));
-}
-
-function priorityBadge(priority: TrackedProgramPriority) {
-  switch (priority) {
-    case 'reach':
-      return <Badge variant="info">ریچ</Badge>;
-    case 'safety':
-      return <Badge variant="success">سیفتی</Badge>;
-    case 'target':
-    default:
-      return <Badge variant="default">تارگت</Badge>;
-  }
-}
-
-export function ProgramCard({
-  program,
-  onStatusChange,
-  onDelete,
-  isUpdating,
-}: {
+interface ProgramCardProps {
   program: TrackedProgram;
-  onStatusChange: (id: number, next: TrackedProgramStatus) => void;
+  onStatusChange: (id: number, status: string) => void;
   onDelete: (id: number) => void;
-  isUpdating?: boolean;
-}) {
-  const title = program.course_name || program.custom_program_name || '—';
-  const deadlineText = program.deadline ? formatDate(program.deadline) : '—';
-  const dLeft = program.deadline ? daysUntil(program.deadline) : null;
+}
 
-  const checklistDone = program.documents_checklist?.filter((i) => i.done).length ?? 0;
-  const checklistTotal = program.documents_checklist?.length ?? 0;
-
+export function ProgramCard({ program, onStatusChange, onDelete }: ProgramCardProps) {
+  const programName = program.program_name || program.custom_program_name || 'Unknown Program';
+  const universityName = program.university_name || program.custom_university_name || 'Unknown University';
+  const country = program.country || program.custom_country || '';
+  
+  const deadline = program.deadline || program.program_deadline;
+  const daysUntilDeadline = deadline
+    ? Math.ceil((new Date(deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+    : null;
+  
   return (
-    <Card className="hover:border-primary-200">
-      <CardContent className="space-y-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-gray-900 truncate">{title}</h3>
-              {priorityBadge(program.priority)}
-            </div>
-            <p className="text-sm text-gray-600 truncate">
-              {program.university_name} • {program.country}
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Link
-              to={`/dashboard/programs/${program.id}`}
-              className="inline-flex items-center text-sm text-primary-600 hover:text-primary-700"
-              title="جزئیات"
-            >
-              <ArrowUpRight className="w-4 h-4" />
-            </Link>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onDelete(program.id)}
-              disabled={isUpdating}
-              className="text-red-600 hover:bg-red-50"
-            >
-              <Trash2 className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div className="sm:col-span-2">
-            <div className="text-xs text-gray-500 mb-1">وضعیت</div>
-            <StatusDropdown
+    <div className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition-shadow">
+      <div className="flex items-start justify-between">
+        <div className="flex-1 min-w-0">
+          {/* Program & University */}
+          <Link
+            to={`/dashboard/programs/${program.id}`}
+            className="block hover:underline"
+          >
+            <h3 className="font-semibold text-gray-900 truncate">{programName}</h3>
+          </Link>
+          <p className="text-sm text-gray-600 mt-0.5">
+            {universityName}
+            {country && <span className="text-gray-400"> · {country}</span>}
+          </p>
+          
+          {/* Badges */}
+          <div className="flex items-center space-x-2 mt-3">
+            {/* Status */}
+            <select
               value={program.status}
-              disabled={isUpdating}
-              onChange={(next) => onStatusChange(program.id, next)}
-            />
-          </div>
-
-          <div>
-            <div className="text-xs text-gray-500 mb-1">ددلاین</div>
-            <div className="flex items-center gap-2 text-sm text-gray-800">
-              <CalendarDays className="w-4 h-4 text-gray-400" />
-              <span>{deadlineText}</span>
-              {typeof dLeft === 'number' && isFinite(dLeft) && (
-                <span className={`text-xs ${dLeft <= 7 ? 'text-red-600' : 'text-gray-500'}`}>
-                  ({dLeft >= 0 ? `${dLeft} روز` : `${Math.abs(dLeft)} روز گذشته`})
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {(program.notes || checklistTotal > 0) && (
-          <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600">
-            {program.notes && <span className="truncate max-w-[38rem]">📝 {program.notes}</span>}
-            {checklistTotal > 0 && (
-              <span>
-                ✅ چک‌لیست: {checklistDone}/{checklistTotal}
+              onChange={(e) => onStatusChange(program.id, e.target.value)}
+              className={`text-xs font-medium px-2 py-1 rounded-full border-0 cursor-pointer ${STATUS_COLORS[program.status]}`}
+            >
+              {Object.entries(STATUS_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </select>
+            
+            {/* Priority */}
+            <span className={`text-xs font-medium px-2 py-1 rounded-full ${PRIORITY_COLORS[program.priority]}`}>
+              {PRIORITY_LABELS[program.priority]}
+            </span>
+            
+            {/* Ranking if available */}
+            {program.university_ranking_qs && (
+              <span className="text-xs text-gray-500">
+                QS #{program.university_ranking_qs}
               </span>
             )}
           </div>
-        )}
-      </CardContent>
-    </Card>
+        </div>
+        
+        {/* Right side - Deadline & Actions */}
+        <div className="text-right ml-4">
+          {deadline && (
+            <div className="mb-2">
+              <div className={`text-sm font-medium ${
+                daysUntilDeadline !== null && daysUntilDeadline <= 7
+                  ? 'text-red-600'
+                  : daysUntilDeadline !== null && daysUntilDeadline <= 30
+                  ? 'text-orange-600'
+                  : 'text-gray-900'
+              }`}>
+                {new Date(deadline).toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                })}
+              </div>
+              {daysUntilDeadline !== null && daysUntilDeadline > 0 && (
+                <div className="text-xs text-gray-500">
+                  {daysUntilDeadline} days left
+                </div>
+              )}
+            </div>
+          )}
+          
+          <button
+            onClick={() => onDelete(program.id)}
+            className="text-gray-400 hover:text-red-500 p-1"
+            title="Remove from tracker"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+      
+      {/* Notes preview if any */}
+      {program.notes && (
+        <p className="mt-3 text-sm text-gray-500 truncate border-t border-gray-100 pt-3">
+          📝 {program.notes}
+        </p>
+      )}
+    </div>
   );
 }

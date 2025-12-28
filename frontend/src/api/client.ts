@@ -1,18 +1,26 @@
 const API_BASE = '/api/v1';
 
 function getToken(): string | null {
-  return localStorage.getItem('apply_token');
+  return localStorage.getItem('token');
 }
 
-async function fetchApi<T>(
+export function setToken(token: string): void {
+  localStorage.setItem('token', token);
+}
+
+export function clearToken(): void {
+  localStorage.removeItem('token');
+}
+
+async function request<T>(
   endpoint: string,
-  options?: RequestInit
+  options: RequestInit = {}
 ): Promise<T> {
   const token = getToken();
   
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...(options?.headers as Record<string, string>),
+    ...(options.headers as Record<string, string>),
   };
   
   if (token) {
@@ -23,51 +31,27 @@ async function fetchApi<T>(
     ...options,
     headers,
   });
-
+  
   if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.detail || `HTTP error ${response.status}`);
+    const error = await response.json().catch(() => ({ detail: 'Request failed' }));
+    throw new Error(error.detail || 'Request failed');
   }
-
-  if (response.status === 204) {
-    return {} as T;
-  }
-
+  
   return response.json();
 }
 
 export const api = {
-  get: <T>(endpoint: string) => fetchApi<T>(endpoint),
-  
-  post: <T>(endpoint: string, data: unknown) =>
-    fetchApi<T>(endpoint, {
+  get: <T>(endpoint: string) => request<T>(endpoint),
+  post: <T>(endpoint: string, data?: unknown) =>
+    request<T>(endpoint, {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: data ? JSON.stringify(data) : undefined,
     }),
-  
   patch: <T>(endpoint: string, data: unknown) =>
-    fetchApi<T>(endpoint, {
+    request<T>(endpoint, {
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
-  
-  delete: (endpoint: string) =>
-    fetchApi(endpoint, { method: 'DELETE' }),
-
-  upload: <T>(endpoint: string, formData: FormData) => {
-    const token = getToken();
-    const headers: Record<string, string> = {};
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-    
-    return fetch(`${API_BASE}${endpoint}`, {
-      method: 'POST',
-      headers,
-      body: formData,
-    }).then(res => {
-      if (!res.ok) throw new Error('Upload failed');
-      return res.json() as Promise<T>;
-    });
-  },
+  delete: <T>(endpoint: string) =>
+    request<T>(endpoint, { method: 'DELETE' }),
 };

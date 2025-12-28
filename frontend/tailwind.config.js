@@ -7,7 +7,7 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: {
+        blue: {
           50: '#eff6ff',
           100: '#dbeafe',
           200: '#bfdbfe',
@@ -23,4 +23,4 @@ export default {
     },
   },
   plugins: [],
-}
+};

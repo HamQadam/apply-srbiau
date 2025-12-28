@@ -1,48 +1,35 @@
+"""Main FastAPI application."""
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.config import get_settings
+from app.database import create_db_and_tables
 from app.api.v1.router import router as api_router
-from app.database import init_db
+
+settings = get_settings()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup and shutdown events."""
-    # Startup: create tables if they don't exist (dev only, use alembic in prod)
-    init_db()
+    # Startup: create tables if they don't exist
+    create_db_and_tables()
     yield
     # Shutdown: cleanup if needed
 
 
 app = FastAPI(
-    title="Apply SRBIAU",
-    description="""
-    📚 **Student Application Journey Database**
-    
-    A knowledge-sharing platform where students document their foreign university 
-    application experiences to help future applicants learn from real journeys.
-    
-    ## What you can share:
-    - **Academic Profile**: GPA, university, major
-    - **Language Credentials**: IELTS, TOEFL, DELF scores
-    - **Documents**: CVs, SOPs, motivation letters
-    - **Activities**: Work experience, research, volunteering
-    - **Applications**: Programs applied to, results, tips
-    
-    ## Privacy
-    You can choose to be anonymous while still sharing valuable data.
-    
-    Built with ❤️ by SRBIAU students for students everywhere.
-    """,
-    version="0.1.0",
+    title="Ghadam - Application Tracker",
+    description="Track your university applications and learn from others' journeys",
+    version="2.0.0",
     lifespan=lifespan,
 )
 
-# CORS middleware
+# CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure properly in production
+    allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -52,17 +39,18 @@ app.add_middleware(
 app.include_router(api_router)
 
 
-@app.get("/", tags=["root"])
-def root():
-    """Welcome endpoint."""
-    return {
-        "message": "Welcome to Apply SRBIAU API",
-        "docs": "/docs",
-        "description": "Share your application journey, learn from others",
-    }
-
-
-@app.get("/health", tags=["health"])
-def health_check():
+@app.get("/health")
+def health():
     """Health check endpoint."""
-    return {"status": "healthy"}
+    return {"status": "healthy", "version": "2.0.0"}
+
+
+@app.get("/")
+def root():
+    """Root endpoint with API info."""
+    return {
+        "name": "Ghadam API",
+        "version": "2.0.0",
+        "docs": "/docs",
+        "description": "Track your university applications, share your journey, earn Ghadam coins",
+    }

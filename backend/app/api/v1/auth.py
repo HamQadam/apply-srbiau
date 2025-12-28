@@ -1,128 +1,181 @@
-from fastapi import APIRouter, HTTPException, status
-from sqlmodel import SQLModel
+"""Authentication API endpoints."""
+from datetime import datetime
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
+from sqlmodel import Session, select
 
-from app.api.deps import SessionDep, CurrentUserRequired
-from app.models import User, UserRead, Applicant
+from app.database import get_session
+from app.models import (
+    User, UserRead, UserUpdate, UserOnboarding, 
+    OnboardingStep, GhadamTransaction, TransactionType,
+    SIGNUP_BONUS_GHADAMS, COMPLETE_ONBOARDING_BONUS,
+)
 from app.services.auth import (
-    create_otp,
-    verify_otp,
-    get_or_create_user,
-    send_sms_otp,
-    create_access_token,
+    create_otp, verify_otp, create_access_token, get_current_user,
 )
 
-router = APIRouter(prefix="/auth", tags=["authentication"])
+router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-class SendOTPRequest(SQLModel):
+class RequestOTPRequest(BaseModel):
     phone: str
 
 
-class SendOTPResponse(SQLModel):
+class RequestOTPResponse(BaseModel):
     message: str
-    phone: str
+    debug_code: str | None = None  # Only in debug mode
 
 
-class VerifyOTPRequest(SQLModel):
+class VerifyOTPRequest(BaseModel):
     phone: str
     code: str
 
 
-class VerifyOTPResponse(SQLModel):
-    access_token: str
-    token_type: str = "bearer"
+class VerifyOTPResponse(BaseModel):
+    token: str
     user: UserRead
+    is_new_user: bool
 
 
-class MeResponse(SQLModel):
-    user: UserRead
-    applicant_id: int | None = None
-
-
-@router.post("/send-otp", response_model=SendOTPResponse)
-def send_otp(request: SendOTPRequest, session: SessionDep):
-    """
-    Send OTP code to phone number.
-    
-    In debug mode, all OTP codes are 000000.
-    """
+@router.post("/request-otp", response_model=RequestOTPResponse)
+def request_otp(
+    data: RequestOTPRequest,
+    session: Session = Depends(get_session),
+):
+    """Request OTP code for phone number."""
     # Normalize phone number
-    phone = request.phone.strip().replace(" ", "")
+    phone = data.phone.strip().replace(" ", "")
     
     # Create OTP
-    otp = create_otp(session, phone)
+    code = create_otp(session, phone)
     
-    # Send SMS (in debug mode, prints to console)
-    send_sms_otp(phone, otp.code)
+    # In production: send SMS via Kavenegar/Twilio
+    # For now, return code in debug mode
+    from app.config import get_settings
+    settings = get_settings()
     
-    return SendOTPResponse(
-        message="کد تایید ارسال شد",  # Verification code sent
-        phone=phone,
+    return RequestOTPResponse(
+        message="OTP sent successfully",
+        debug_code=code if settings.debug_otp else None,
     )
 
 
 @router.post("/verify-otp", response_model=VerifyOTPResponse)
-def verify_otp_endpoint(request: VerifyOTPRequest, session: SessionDep):
-    """
-    Verify OTP code and return JWT token.
-    
-    Creates a new user if phone number doesn't exist.
-    """
-    phone = request.phone.strip().replace(" ", "")
-    
-    # Verify OTP
-    if not verify_otp(session, phone, request.code):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="کد نامعتبر یا منقضی شده",  # Invalid or expired code
-        )
-    
-    # Get or create user
-    user = get_or_create_user(session, phone)
-    
-    # Create JWT token
-    access_token = create_access_token(user.id)
-    
-    return VerifyOTPResponse(
-        access_token=access_token,
-        user=UserRead.model_validate(user),
-    )
-
-
-@router.get("/me", response_model=MeResponse)
-def get_me(session: SessionDep, user: CurrentUserRequired):
-    """Get current authenticated user's info."""
-    # Check if user has an applicant profile
-    applicant = session.query(Applicant).filter(Applicant.user_id == user.id).first()
-    
-    return MeResponse(
-        user=UserRead.model_validate(user),
-        applicant_id=applicant.id if applicant else None,
-    )
-
-
-@router.post("/logout")
-def logout(user: CurrentUserRequired):
-    """
-    Logout user.
-    
-    Note: Since we use JWT tokens, we can't truly invalidate them server-side.
-    The client should delete the token. This endpoint exists for API completeness.
-    """
-    return {"message": "خروج موفق", "detail": "Logged out successfully"}
-
-
-@router.patch("/update-profile", response_model=UserRead)
-def update_profile(
-    session: SessionDep,
-    user: CurrentUserRequired,
-    display_name: str | None = None,
+def verify_otp_endpoint(
+    data: VerifyOTPRequest,
+    session: Session = Depends(get_session),
 ):
-    """Update user profile."""
-    if display_name:
-        user.display_name = display_name
+    """Verify OTP and return JWT token."""
+    phone = data.phone.strip().replace(" ", "")
+    
+    if not verify_otp(session, phone, data.code):
+        raise HTTPException(status_code=400, detail="Invalid or expired OTP")
+    
+    # Find or create user
+    user = session.exec(
+        select(User).where(User.phone == phone)
+    ).first()
+    
+    is_new_user = False
+    
+    if not user:
+        is_new_user = True
+        user = User(
+            phone=phone,
+            ghadam_balance=SIGNUP_BONUS_GHADAMS,
+        )
         session.add(user)
         session.commit()
         session.refresh(user)
+        
+        # Record signup bonus transaction
+        tx = GhadamTransaction(
+            user_id=user.id,
+            transaction_type=TransactionType.SIGNUP_BONUS,
+            amount=SIGNUP_BONUS_GHADAMS,
+            balance_after=user.ghadam_balance,
+            description="Welcome bonus!",
+        )
+        session.add(tx)
+        session.commit()
     
-    return UserRead.model_validate(user)
+    # Create token
+    token = create_access_token(user.id)
+    
+    return VerifyOTPResponse(
+        token=token,
+        user=UserRead.model_validate(user),
+        is_new_user=is_new_user,
+    )
+
+
+@router.get("/me", response_model=UserRead)
+def get_me(
+    current_user: User = Depends(get_current_user),
+):
+    """Get current user profile."""
+    return UserRead.model_validate(current_user)
+
+
+@router.patch("/me", response_model=UserRead)
+def update_me(
+    data: UserUpdate,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Update current user profile."""
+    update_data = data.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(current_user, key, value)
+    
+    current_user.updated_at = datetime.utcnow()
+    session.commit()
+    session.refresh(current_user)
+    
+    return UserRead.model_validate(current_user)
+
+
+@router.post("/onboarding", response_model=UserRead)
+def set_onboarding_goal(
+    data: UserOnboarding,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Set user's goal during onboarding."""
+    current_user.goal = data.goal
+    current_user.onboarding_step = OnboardingStep.GOAL_SELECTED
+    current_user.updated_at = datetime.utcnow()
+    
+    session.commit()
+    session.refresh(current_user)
+    
+    return UserRead.model_validate(current_user)
+
+
+@router.post("/onboarding/complete", response_model=UserRead)
+def complete_onboarding(
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Mark onboarding as complete and award bonus."""
+    if current_user.onboarding_completed:
+        return UserRead.model_validate(current_user)
+    
+    current_user.onboarding_step = OnboardingStep.COMPLETED
+    current_user.onboarding_completed = True
+    current_user.ghadam_balance += COMPLETE_ONBOARDING_BONUS
+    
+    # Record bonus
+    tx = GhadamTransaction(
+        user_id=current_user.id,
+        transaction_type=TransactionType.ONBOARDING_BONUS,
+        amount=COMPLETE_ONBOARDING_BONUS,
+        balance_after=current_user.ghadam_balance,
+        description="Completed onboarding",
+    )
+    session.add(tx)
+    
+    session.commit()
+    session.refresh(current_user)
+    
+    return UserRead.model_validate(current_user)

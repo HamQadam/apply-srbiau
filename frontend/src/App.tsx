@@ -1,45 +1,26 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { Layout } from './components/Layout';
-import {
-  HomePage,
-  ApplicantsPage,
-  ApplicantDetailPage,
-  NewApplicantPage,
-  SearchPage,
-  StatsPage,
-  DocumentsPage,
-  LoginPage,
-  WalletPage,
-  DashboardPage,
-  AddProgramPage,
-  ProgramDetailPage,
-} from './pages';
-import { Spinner } from './components/ui';
+import { Layout } from './components/Layout/Layout';
+import { HomePage } from './pages/Home/HomePage';
+import { LoginPage } from './pages/Auth/LoginPage';
+import { OnboardingPage } from './pages/Onboarding/OnboardingPage';
+import { DashboardPage } from './pages/Dashboard/DashboardPage';
+import { AddProgramPage } from './pages/Dashboard/AddProgramPage';
+import { ProgramDetailPage } from './pages/Dashboard/ProgramDetailPage';
+import { ExplorePage } from './pages/Explore/ExplorePage';
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes
-      retry: 1,
-    },
-  },
-});
-
-// Protected route wrapper
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, isLoading } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center min-h-[50vh]">
-        <Spinner className="w-8 h-8 text-primary-600" />
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
       </div>
     );
   }
 
-  if (!user) {
+  if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
@@ -48,70 +29,52 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 function AppRoutes() {
   return (
-    <Layout>
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/applicants" element={<ApplicantsPage />} />
-        <Route
-          path="/applicants/new"
-          element={
-            <ProtectedRoute>
-              <NewApplicantPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route path="/applicants/:id" element={<ApplicantDetailPage />} />
-        <Route path="/search" element={<SearchPage />} />
-        <Route path="/stats" element={<StatsPage />} />
-        <Route path="/documents" element={<DocumentsPage />} />
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <DashboardPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/dashboard/programs/new"
-          element={
-            <ProtectedRoute>
-              <AddProgramPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/dashboard/programs/:id"
-          element={
-            <ProtectedRoute>
-              <ProgramDetailPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/wallet"
-          element={
-            <ProtectedRoute>
-              <WalletPage />
-            </ProtectedRoute>
-          }
-        />
-      </Routes>
-    </Layout>
+    <Routes>
+      {/* Public routes */}
+      <Route path="/" element={<Layout />}>
+        <Route index element={<HomePage />} />
+        <Route path="explore" element={<ExplorePage />} />
+      </Route>
+      
+      {/* Auth routes */}
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/onboarding" element={
+        <ProtectedRoute>
+          <OnboardingPage />
+        </ProtectedRoute>
+      } />
+      
+      {/* Protected routes */}
+      <Route path="/dashboard" element={<Layout />}>
+        <Route index element={
+          <ProtectedRoute>
+            <DashboardPage />
+          </ProtectedRoute>
+        } />
+        <Route path="add" element={
+          <ProtectedRoute>
+            <AddProgramPage />
+          </ProtectedRoute>
+        } />
+        <Route path="programs/:id" element={
+          <ProtectedRoute>
+            <ProgramDetailPage />
+          </ProtectedRoute>
+        } />
+      </Route>
+      
+      {/* Fallback */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }
 
-function App() {
+export default function App() {
   return (
-    <QueryClientProvider client={queryClient}>
+    <BrowserRouter>
       <AuthProvider>
-        <BrowserRouter>
-          <AppRoutes />
-        </BrowserRouter>
+        <AppRoutes />
       </AuthProvider>
-    </QueryClientProvider>
+    </BrowserRouter>
   );
 }
-
-export default App;

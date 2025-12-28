@@ -1,245 +1,346 @@
-import { useMemo, useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Plus } from 'lucide-react';
-
-import { trackerApi } from '../../api';
-import type {
-  ChecklistItem,
-  CourseWithUniversity,
-  TrackedProgramPriority,
-  TrackedProgramStatus,
-} from '../../types';
-import { Button, Card, CardContent, Select } from '../../components/ui';
-import { ProgramSearch } from '../../components/Tracker/ProgramSearch';
-
-const PRIORITY_OPTIONS: Array<{ value: TrackedProgramPriority; label: string }> = [
-  { value: 'safety', label: 'سیفتی' },
-  { value: 'target', label: 'تارگت' },
-  { value: 'reach', label: 'ریچ' },
-];
-
-const STATUS_OPTIONS: Array<{ value: TrackedProgramStatus; label: string }> = [
-  { value: 'researching', label: 'در حال بررسی' },
-  { value: 'preparing', label: 'در حال آماده‌سازی' },
-  { value: 'submitted', label: 'ارسال‌شده' },
-  { value: 'interview', label: 'مصاحبه' },
-  { value: 'accepted', label: 'قبول‌شده' },
-  { value: 'rejected', label: 'رد‌شده' },
-  { value: 'waitlisted', label: 'لیست انتظار' },
-];
-
-function defaultChecklist(): ChecklistItem[] {
-  return [
-    { name: 'SOP', done: false },
-    { name: 'CV', done: false },
-    { name: 'Transcript', done: false },
-    { name: 'LOR', done: false },
-    { name: 'Portfolio', done: false },
-    { name: 'Test Score', done: false },
-  ];
-}
+import { courseApi, trackerApi } from '../../api/services';
+import type { CourseSummary, Priority, IntakePeriod } from '../../types';
 
 export function AddProgramPage() {
-  const nav = useNavigate();
-  const qc = useQueryClient();
-
-  const [mode, setMode] = useState<'database' | 'custom'>('database');
-  const [selected, setSelected] = useState<CourseWithUniversity | null>(null);
-
-  // Shared form fields
-  const [deadline, setDeadline] = useState<string>('');
-  const [status, setStatus] = useState<TrackedProgramStatus>('researching');
-  const [priority, setPriority] = useState<TrackedProgramPriority>('target');
-  const [notes, setNotes] = useState<string>('');
-
-  // Custom fields
-  const [customProgramName, setCustomProgramName] = useState('');
-  const [customUniversityName, setCustomUniversityName] = useState('');
+  const navigate = useNavigate();
+  const [mode, setMode] = useState<'search' | 'custom'>('search');
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<CourseSummary[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [selectedCourse, setSelectedCourse] = useState<CourseSummary | null>(null);
+  
+  // Custom entry fields
+  const [customProgram, setCustomProgram] = useState('');
+  const [customUniversity, setCustomUniversity] = useState('');
   const [customCountry, setCustomCountry] = useState('');
-
-  const inferred = useMemo(() => {
-    if (!selected) return null;
-    return {
-      course_id: selected.id,
-      university_name: selected.university.name,
-      country: selected.university.country,
-      suggested_deadline: selected.application_deadline || '',
-    };
-  }, [selected]);
-
-  const createMutation = useMutation({
-    mutationFn: (payload: any) => trackerApi.create(payload),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['tracker', 'programs'] });
-      qc.invalidateQueries({ queryKey: ['tracker', 'deadlines'] });
-      qc.invalidateQueries({ queryKey: ['tracker', 'stats'] });
-      nav('/dashboard');
-    },
-  });
-
-  const canSubmit = useMemo(() => {
-    if (mode === 'database') return Boolean(selected);
-    return Boolean(customProgramName.trim() && customUniversityName.trim() && customCountry.trim());
-  }, [mode, selected, customProgramName, customUniversityName, customCountry]);
-
+  const [customDeadline, setCustomDeadline] = useState('');
+  
+  // Common fields
+  const [priority, setPriority] = useState<Priority>('target');
+  const [intake, setIntake] = useState<IntakePeriod | ''>('fall_2025');
+  const [notes, setNotes] = useState('');
+  
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Debounced search
+  useEffect(() => {
+    if (query.length < 2) {
+      setResults([]);
+      return;
+    }
+    
+    const timer = setTimeout(async () => {
+      setSearching(true);
+      try {
+        const courses = await courseApi.autocomplete(query);
+        setResults(courses);
+      } catch (err) {
+        console.error('Search failed:', err);
+      } finally {
+        setSearching(false);
+      }
+    }, 300);
+    
+    return () => clearTimeout(timer);
+  }, [query]);
+  
+  const handleSelectCourse = (course: CourseSummary) => {
+    setSelectedCourse(course);
+    setQuery('');
+    setResults([]);
+  };
+  
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSubmitting(true);
+    
+    try {
+      if (mode === 'search' && selectedCourse) {
+        await trackerApi.addProgram({
+          course_id: selectedCourse.id,
+          priority,
+          intake: intake || undefined,
+          notes: notes || undefined,
+        });
+      } else if (mode === 'custom' && customProgram && customUniversity) {
+        await trackerApi.addProgram({
+          custom_program_name: customProgram,
+          custom_university_name: customUniversity,
+          custom_country: customCountry || undefined,
+          custom_deadline: customDeadline || undefined,
+          priority,
+          intake: intake || undefined,
+          notes: notes || undefined,
+        });
+      } else {
+        setError('Please select a program or fill in custom details');
+        setSubmitting(false);
+        return;
+      }
+      
+      navigate('/dashboard');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to add program');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+  
+  const canSubmit = mode === 'search' 
+    ? !!selectedCourse 
+    : (customProgram && customUniversity);
+  
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">افزودن برنامه</h1>
-          <p className="text-sm text-gray-600 mt-1">
-            می‌تونی از دیتابیس انتخاب کنی یا برنامه رو دستی اضافه کنی.
-          </p>
-        </div>
-        <Button variant="ghost" onClick={() => nav('/dashboard')}
-          className="text-gray-700">
-          بازگشت
-          <ArrowRight className="w-4 h-4" />
-        </Button>
+    <div className="max-w-2xl mx-auto px-4 py-8">
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-gray-900">Add Program to Tracker</h1>
+        <p className="text-gray-600 mt-1">
+          Search our database or add a custom program
+        </p>
       </div>
-
-      <div className="flex gap-2">
+      
+      {/* Mode Toggle */}
+      <div className="flex space-x-2 mb-6">
         <button
-          type="button"
-          className={`px-4 py-2 rounded-lg text-sm font-medium border ${
-            mode === 'database' ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-gray-700 border-gray-200'
+          onClick={() => setMode('search')}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            mode === 'search'
+              ? 'bg-blue-600 text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
           }`}
-          onClick={() => setMode('database')}
         >
-          از دیتابیس
+          Search Programs
         </button>
         <button
-          type="button"
-          className={`px-4 py-2 rounded-lg text-sm font-medium border ${
-            mode === 'custom' ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-gray-700 border-gray-200'
-          }`}
           onClick={() => setMode('custom')}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            mode === 'custom'
+              ? 'bg-blue-600 text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }`}
         >
-          دستی
+          Add Custom
         </button>
       </div>
-
-      <Card>
-        <CardContent className="space-y-5">
-          {mode === 'database' ? (
-            <div className="space-y-3">
-              <div className="text-sm font-medium text-gray-900">جستجو در برنامه‌ها</div>
-              <ProgramSearch
-                onSelect={(c: CourseWithUniversity) => {
-                  setSelected(c);
-                  if (!deadline && c.application_deadline) setDeadline(c.application_deadline);
-                }}
+      
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {mode === 'search' ? (
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <h2 className="font-semibold text-gray-900 mb-4">Find Program</h2>
+            
+            {/* Search Input */}
+            <div className="relative">
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search by program name or university..."
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
-
-              {inferred && (
-                <div className="text-sm text-gray-700 bg-gray-50 border border-gray-100 rounded-lg p-3">
-                  <div className="font-medium">انتخاب شد:</div>
-                  <div className="mt-1">
-                    {selected?.course_name} — {inferred.university_name} ({inferred.country})
-                  </div>
+              {searching && (
+                <div className="absolute right-3 top-3">
+                  <div className="animate-spin w-5 h-5 border-2 border-gray-300 border-t-blue-600 rounded-full"></div>
+                </div>
+              )}
+              
+              {/* Search Results Dropdown */}
+              {results.length > 0 && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                  {results.map((course) => (
+                    <button
+                      key={course.id}
+                      type="button"
+                      onClick={() => handleSelectCourse(course)}
+                      className="w-full px-4 py-3 text-left hover:bg-gray-50 border-b border-gray-100 last:border-0"
+                    >
+                      <div className="font-medium text-gray-900">{course.name}</div>
+                      <div className="text-sm text-gray-600">
+                        {course.university_name} · {course.university_country}
+                        {course.deadline_fall && (
+                          <span className="text-gray-400">
+                            {' '}· Deadline: {new Date(course.deadline_fall).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  ))}
                 </div>
               )}
             </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            
+            {/* Selected Course */}
+            {selectedCourse && (
+              <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-medium text-blue-900">{selectedCourse.name}</div>
+                    <div className="text-sm text-blue-700">
+                      {selectedCourse.university_name} · {selectedCourse.university_country}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCourse(null)}
+                    className="text-blue-600 hover:text-blue-800"
+                  >
+                    Change
+                  </button>
+                </div>
+              </div>
+            )}
+            
+            {!selectedCourse && query.length === 0 && (
+              <p className="mt-4 text-sm text-gray-500 text-center">
+                Start typing to search for programs
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <h2 className="font-semibold text-gray-900 mb-4">Custom Program</h2>
+            
+            <div className="space-y-4">
               <div>
-                <label className="block text-sm text-gray-600 mb-1">نام برنامه</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Program Name *
+                </label>
                 <input
-                  value={customProgramName}
-                  onChange={(e) => setCustomProgramName(e.target.value)}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2"
-                  placeholder="مثلاً: Computer Science (MSc)"
+                  type="text"
+                  value={customProgram}
+                  onChange={(e) => setCustomProgram(e.target.value)}
+                  placeholder="e.g., MSc Computer Science"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required={mode === 'custom'}
                 />
               </div>
+              
               <div>
-                <label className="block text-sm text-gray-600 mb-1">نام دانشگاه</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  University Name *
+                </label>
                 <input
-                  value={customUniversityName}
-                  onChange={(e) => setCustomUniversityName(e.target.value)}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2"
-                  placeholder="مثلاً: TU Delft"
+                  type="text"
+                  value={customUniversity}
+                  onChange={(e) => setCustomUniversity(e.target.value)}
+                  placeholder="e.g., Technical University of Munich"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required={mode === 'custom'}
                 />
               </div>
-              <div>
-                <label className="block text-sm text-gray-600 mb-1">کشور</label>
-                <input
-                  value={customCountry}
-                  onChange={(e) => setCustomCountry(e.target.value)}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2"
-                  placeholder="مثلاً: Netherlands"
-                />
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Country
+                  </label>
+                  <input
+                    type="text"
+                    value={customCountry}
+                    onChange={(e) => setCustomCountry(e.target.value)}
+                    placeholder="e.g., Germany"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Application Deadline
+                  </label>
+                  <input
+                    type="date"
+                    value={customDeadline}
+                    onChange={(e) => setCustomDeadline(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
               </div>
             </div>
-          )}
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm text-gray-600 mb-1">ددلاین</label>
-              <input
-                type="date"
-                value={deadline}
-                onChange={(e) => setDeadline(e.target.value)}
-                className="w-full rounded-lg border border-gray-200 px-3 py-2"
-              />
+          </div>
+        )}
+        
+        {/* Common Fields */}
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <h2 className="font-semibold text-gray-900 mb-4">Application Details</h2>
+          
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Priority
+                </label>
+                <select
+                  value={priority}
+                  onChange={(e) => setPriority(e.target.value as Priority)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="dream">Dream (Reach)</option>
+                  <option value="target">Target (Good fit)</option>
+                  <option value="safety">Safety (Backup)</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Intake
+                </label>
+                <select
+                  value={intake}
+                  onChange={(e) => setIntake(e.target.value as IntakePeriod | '')}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">Not sure yet</option>
+                  <option value="fall_2025">Fall 2025</option>
+                  <option value="spring_2026">Spring 2026</option>
+                  <option value="fall_2026">Fall 2026</option>
+                  <option value="spring_2027">Spring 2027</option>
+                </select>
+              </div>
             </div>
+            
             <div>
-              <label className="block text-sm text-gray-600 mb-1">اولویت</label>
-              <Select
-                value={priority}
-                onChange={(e) => setPriority(e.target.value as any)}
-                options={PRIORITY_OPTIONS}
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-gray-600 mb-1">وضعیت</label>
-              <Select
-                value={status}
-                onChange={(e) => setStatus(e.target.value as any)}
-                options={STATUS_OPTIONS}
-              />
-            </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm text-gray-600 mb-1">یادداشت</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Notes (optional)
+              </label>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
+                placeholder="Any notes about this application..."
                 rows={3}
-                className="w-full rounded-lg border border-gray-200 px-3 py-2"
-                placeholder="یادداشت خصوصی، لینک‌ها، TODOها..."
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
               />
             </div>
           </div>
-
-          <div className="flex justify-end">
-            <Button
-              disabled={!canSubmit || createMutation.isPending}
-              onClick={() => {
-                const payload: any = {
-                  status,
-                  priority,
-                  notes: notes || null,
-                  deadline: deadline || null,
-                  documents_checklist: defaultChecklist(),
-                };
-
-                if (mode === 'database' && inferred) {
-                  payload.course_id = inferred.course_id;
-                } else {
-                  payload.custom_program_name = customProgramName.trim();
-                  payload.university_name = customUniversityName.trim();
-                  payload.country = customCountry.trim();
-                }
-
-                createMutation.mutate(payload);
-              }}
-            >
-              <Plus className="w-4 h-4" />
-              افزودن
-            </Button>
+        </div>
+        
+        {/* Error */}
+        {error && (
+          <div className="p-4 bg-red-50 text-red-600 rounded-lg text-sm">
+            {error}
           </div>
-        </CardContent>
-      </Card>
+        )}
+        
+        {/* Actions */}
+        <div className="flex justify-end space-x-4">
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard')}
+            className="px-6 py-2 text-gray-700 font-medium hover:text-gray-900"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={!canSubmit || submitting}
+            className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {submitting ? 'Adding...' : 'Add to Tracker'}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

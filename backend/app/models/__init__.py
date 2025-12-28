@@ -1,148 +1,130 @@
-"""Data models for the application database."""
+"""Data models for the application."""
 
-from app.models.user import (
-    User,
-    UserRole,
-    UserCreate,
-    UserRead,
-    UserPublic,
-    OTP,
-    Transaction,
-    TransactionType,
-    TransactionRead,
-)
-from app.models.subscription import (
-    Subscription,
-    SubscriptionType,
-    SubscriptionRead,
-    SubscriptionCreate,
-    GhadamRewards,
-)
-from app.models.applicant import (
-    Applicant,
-    ApplicantCreate,
-    ApplicantRead,
-    ApplicantReadFull,
-    ApplicantPreview,
-    ApplicantUpdate,
-)
-from app.models.language import (
-    LanguageCredential,
-    LanguageCredentialCreate,
-    LanguageCredentialRead,
-    LanguageCredentialUpdate,
-)
-from app.models.document import (
-    Document,
-    DocumentType,
-    DocumentCreate,
-    DocumentRead,
-    DocumentUpdate,
-)
-from app.models.activity import (
-    ExtracurricularActivity,
-    ActivityType,
-    ExtracurricularActivityCreate,
-    ExtracurricularActivityRead,
-    ExtracurricularActivityUpdate,
-)
-from app.models.application import (
-    Application,
-    ApplicationStatus,
-    DegreeLevel,
-    ApplicationCreate,
-    ApplicationRead,
-    ApplicationUpdate,
-)
-from app.models.university import (
+from .university import (
     University,
+    UniversityBase,
     UniversityCreate,
     UniversityRead,
-    UniversityReadWithCourses,
-    UniversityUpdate,
-)
-from app.models.course import (
-    Course,
-    CourseCreate,
-    CourseRead,
-    CourseReadWithUniversity,
-    CourseUpdate,
+    UniversitySearch,
 )
 
-from app.models.tracked_program import (
+from .course import (
+    Course,
+    CourseBase,
+    CourseCreate,
+    CourseRead,
+    CourseSearch,
+    CourseSummary,
+    DegreeLevel,
+    Currency,
+    TeachingLanguage,
+    IntakeType,
+)
+
+from .course_language_requirement import (
+    CourseLanguageRequirement,
+    CourseLanguageRequirementBase,
+    CourseLanguageRequirementCreate,
+    CourseLanguageRequirementRead,
+    LanguageTestType,
+    CEFRLevel,
+    COMMON_REQUIREMENTS,
+)
+
+from .tracked_program import (
     TrackedProgram,
-    TrackedProgramStatus,
-    TrackedProgramPriority,
+    TrackedProgramBase,
     TrackedProgramCreate,
-    TrackedProgramRead,
     TrackedProgramUpdate,
+    TrackedProgramRead,
+    TrackerStats,
+    ApplicationStatus,
+    Priority,
+    IntakePeriod,
+    DEFAULT_CHECKLIST,
+)
+
+from .user import (
+    User,
+    UserBase,
+    UserCreate,
+    UserRead,
+    UserUpdate,
+    UserOnboarding,
+    UserGoal,
+    OnboardingStep,
+    OTPCode,
+    SIGNUP_BONUS_GHADAMS,
+    FIRST_PROGRAM_BONUS,
+    COMPLETE_ONBOARDING_BONUS,
+)
+
+from .ghadam import (
+    GhadamTransaction,
+    GhadamTransactionRead,
+    TransactionType,
+    GHADAM_REWARDS,
+    GHADAM_COSTS,
+    PROFILE_VIEW_COST,
+    CONTRIBUTOR_SHARE,
 )
 
 __all__ = [
-    # User & Auth
-    "User",
-    "UserRole",
-    "UserCreate",
-    "UserRead",
-    "UserPublic",
-    "OTP",
-    "Transaction",
-    "TransactionType",
-    "TransactionRead",
-    # Subscription
-    "Subscription",
-    "SubscriptionType",
-    "SubscriptionRead",
-    "SubscriptionCreate",
-    "GhadamRewards",
-    # Applicant
-    "Applicant",
-    "ApplicantCreate",
-    "ApplicantRead",
-    "ApplicantReadFull",
-    "ApplicantPreview",
-    "ApplicantUpdate",
-    # Language
-    "LanguageCredential",
-    "LanguageCredentialCreate",
-    "LanguageCredentialRead",
-    "LanguageCredentialUpdate",
-    # Document
-    "Document",
-    "DocumentType",
-    "DocumentCreate",
-    "DocumentRead",
-    "DocumentUpdate",
-    # Activity
-    "ExtracurricularActivity",
-    "ActivityType",
-    "ExtracurricularActivityCreate",
-    "ExtracurricularActivityRead",
-    "ExtracurricularActivityUpdate",
-    # Application
-    "Application",
-    "ApplicationStatus",
-    "DegreeLevel",
-    "ApplicationCreate",
-    "ApplicationRead",
-    "ApplicationUpdate",
     # University
     "University",
+    "UniversityBase",
     "UniversityCreate",
     "UniversityRead",
-    "UniversityReadWithCourses",
-    "UniversityUpdate",
+    "UniversitySearch",
     # Course
     "Course",
+    "CourseBase",
     "CourseCreate",
     "CourseRead",
-    "CourseReadWithUniversity",
-    "CourseUpdate",
-    # Tracker
+    "CourseSearch",
+    "CourseSummary",
+    "DegreeLevel",
+    "Currency",
+    "TeachingLanguage",
+    "IntakeType",
+    # Language Requirements
+    "CourseLanguageRequirement",
+    "CourseLanguageRequirementBase",
+    "CourseLanguageRequirementCreate",
+    "CourseLanguageRequirementRead",
+    "LanguageTestType",
+    "CEFRLevel",
+    "COMMON_REQUIREMENTS",
+    # Tracked Program
     "TrackedProgram",
-    "TrackedProgramStatus",
-    "TrackedProgramPriority",
+    "TrackedProgramBase",
     "TrackedProgramCreate",
-    "TrackedProgramRead",
     "TrackedProgramUpdate",
+    "TrackedProgramRead",
+    "TrackerStats",
+    "ApplicationStatus",
+    "Priority",
+    "IntakePeriod",
+    "DEFAULT_CHECKLIST",
+    # User
+    "User",
+    "UserBase",
+    "UserCreate",
+    "UserRead",
+    "UserUpdate",
+    "UserOnboarding",
+    "UserGoal",
+    "OnboardingStep",
+    "OTPCode",
+    "SIGNUP_BONUS_GHADAMS",
+    "FIRST_PROGRAM_BONUS",
+    "COMPLETE_ONBOARDING_BONUS",
+    # Ghadam
+    "GhadamTransaction",
+    "GhadamTransactionRead",
+    "TransactionType",
+    "GHADAM_REWARDS",
+    "GHADAM_COSTS",
+    "PROFILE_VIEW_COST",
+    "CONTRIBUTOR_SHARE",
 ]

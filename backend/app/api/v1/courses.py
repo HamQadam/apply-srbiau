@@ -1,201 +1,198 @@
-from fastapi import APIRouter, HTTPException, Query, Request
-from sqlmodel import select, col
-from datetime import datetime
+"""Course/Program API endpoints."""
+from typing import List, Optional
+from datetime import date
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlmodel import Session, select, func, col
 
-from app.api.deps import SessionDep, CurrentUser, CurrentUserRequired
+from app.database import get_session
 from app.models import (
-    Course,
-    CourseCreate,
-    CourseRead,
-    CourseReadWithUniversity,
-    CourseUpdate,
-    University,
-    DegreeLevel,
+    Course, CourseCreate, CourseRead, CourseSearch, CourseSummary,
+    University, DegreeLevel, TeachingLanguage,
+    CourseLanguageRequirement, CourseLanguageRequirementRead,
 )
-from app.services.course_access import CourseViewTracker
+from app.services.auth import get_optional_user
 
 router = APIRouter(prefix="/courses", tags=["courses"])
 
 
-@router.post("/", response_model=CourseRead, status_code=201)
-def create_course(
-    course: CourseCreate,
-    session: SessionDep,
-    user: CurrentUserRequired,
+def enrich_course(course: Course) -> CourseRead:
+    """Add university data to course response."""
+    data = CourseRead.model_validate(course)
+    if course.university:
+        data.university_name = course.university.name
+        data.university_country = course.university.country
+        data.university_city = course.university.city
+        data.university_ranking_qs = course.university.ranking_qs
+    return data
+
+
+@router.get("", response_model=List[CourseRead])
+def search_courses(
+    query: Optional[str] = None,
+    field: Optional[str] = None,
+    degree_level: Optional[DegreeLevel] = None,
+    country: Optional[str] = None,
+    teaching_language: Optional[TeachingLanguage] = None,
+    max_tuition: Optional[int] = None,
+    tuition_free_only: bool = False,
+    scholarships_only: bool = False,
+    gre_not_required: bool = False,
+    deadline_after: Optional[date] = None,
+    deadline_before: Optional[date] = None,
+    limit: int = Query(default=20, le=100),
+    offset: int = Query(default=0, ge=0),
+    session: Session = Depends(get_session),
 ):
-    """
-    Create a new course in the global catalog.
-
-    Requires authentication.
-    """
-    # Verify university exists
-    university = session.get(University, course.university_id)
-    if not university:
-        raise HTTPException(status_code=404, detail="University not found")
-
-    db_course = Course.model_validate(course)
-    session.add(db_course)
-    session.commit()
-    session.refresh(db_course)
-    return db_course
-
-
-@router.get("/", response_model=list[CourseReadWithUniversity])
-def list_courses(
-    request: Request,
-    session: SessionDep,
-    user: CurrentUser,
-    skip: int = Query(0, ge=0),
-    limit: int = Query(20, ge=1, le=100),
-    university_id: int | None = Query(None, description="Filter by university"),
-    degree_level: DegreeLevel | None = Query(None, description="Filter by degree level"),
-    country: str | None = Query(None, description="Filter by country"),
-    course_name: str | None = Query(None, description="Search by course name"),
-):
-    """
-    List all courses with optional filters.
-
-    Rate limited for unauthenticated users: N courses per 24 hours.
-    Authenticated users have unlimited access.
-    """
-    # Rate limiting check
-    client_ip = request.client.host if request.client else "unknown"
-    can_view, remaining = CourseViewTracker.can_view_course(session, user, client_ip)
-
-    if not can_view:
-        raise HTTPException(
-            status_code=403,
-            detail={
-                "message": "You have reached the limit of free course views. Please sign in to continue.",
-                "remaining_views": 0,
-                "requires_auth": True,
-            },
+    """Search and filter courses."""
+    stmt = select(Course).join(University)
+    
+    if query:
+        stmt = stmt.where(
+            col(Course.name).ilike(f"%{query}%") |
+            col(Course.field).ilike(f"%{query}%") |
+            col(University.name).ilike(f"%{query}%")
         )
-
-    query = select(Course)
-
-    if university_id:
-        query = query.where(Course.university_id == university_id)
+    if field:
+        stmt = stmt.where(col(Course.field).ilike(f"%{field}%"))
     if degree_level:
-        query = query.where(Course.degree_level == degree_level)
-    if course_name:
-        query = query.where(col(Course.course_name).ilike(f"%{course_name}%"))
-
-    # Filter by country requires join with University
+        stmt = stmt.where(Course.degree_level == degree_level)
     if country:
-        query = query.join(University).where(col(University.country).ilike(f"%{country}%"))
+        stmt = stmt.where(University.country == country)
+    if teaching_language:
+        stmt = stmt.where(Course.teaching_language == teaching_language)
+    if tuition_free_only:
+        stmt = stmt.where(Course.is_tuition_free == True)
+    if max_tuition:
+        stmt = stmt.where(
+            (Course.is_tuition_free == True) |
+            (Course.tuition_fee_amount <= max_tuition)
+        )
+    if scholarships_only:
+        stmt = stmt.where(Course.scholarships_available == True)
+    if gre_not_required:
+        stmt = stmt.where(Course.gre_required == False)
+    if deadline_after:
+        stmt = stmt.where(Course.deadline_fall >= deadline_after)
+    if deadline_before:
+        stmt = stmt.where(Course.deadline_fall <= deadline_before)
+    
+    stmt = stmt.order_by(University.ranking_qs.asc().nullslast(), Course.name)
+    stmt = stmt.offset(offset).limit(limit)
+    
+    courses = session.exec(stmt).all()
+    return [enrich_course(c) for c in courses]
 
-    query = query.offset(skip).limit(limit).order_by(Course.course_name)
-    courses = session.exec(query).all()
 
-    # Record view for anonymous users
-    if not user:
-        CourseViewTracker.record_view(client_ip)
-
-    return courses
-
-
-@router.get("/check-access", response_model=dict)
-def check_course_access(
-    request: Request,
-    session: SessionDep,
-    user: CurrentUser,
+@router.get("/autocomplete", response_model=List[CourseSummary])
+def autocomplete_courses(
+    q: str = Query(min_length=2),
+    limit: int = Query(default=10, le=20),
+    session: Session = Depends(get_session),
 ):
-    """Check how many free course views remaining for this user/IP."""
-    client_ip = request.client.host if request.client else "unknown"
-    can_view, remaining = CourseViewTracker.can_view_course(session, user, client_ip)
+    """Autocomplete search for courses (for tracker add flow)."""
+    stmt = (
+        select(Course)
+        .join(University)
+        .where(
+            col(Course.name).ilike(f"%{q}%") |
+            col(University.name).ilike(f"%{q}%")
+        )
+        .order_by(University.ranking_qs.asc().nullslast())
+        .limit(limit)
+    )
+    
+    courses = session.exec(stmt).all()
+    
+    return [
+        CourseSummary(
+            id=c.id,
+            name=c.name,
+            degree_level=c.degree_level,
+            university_name=c.university.name if c.university else "Unknown",
+            university_country=c.university.country if c.university else "Unknown",
+            deadline_fall=c.deadline_fall,
+        )
+        for c in courses
+    ]
 
-    return {
-        "can_view": can_view,
-        "remaining_views": remaining if remaining >= 0 else "unlimited",
-        "is_authenticated": user is not None,
-    }
+
+@router.get("/fields")
+def list_fields(
+    session: Session = Depends(get_session),
+):
+    """Get list of fields/disciplines with course count."""
+    fields = session.exec(
+        select(Course.field, func.count(Course.id))
+        .group_by(Course.field)
+        .order_by(func.count(Course.id).desc())
+    ).all()
+    
+    return [{"field": f[0], "count": f[1]} for f in fields]
 
 
-@router.get("/{course_id}", response_model=CourseReadWithUniversity)
+@router.get("/{course_id}", response_model=CourseRead)
 def get_course(
     course_id: int,
-    request: Request,
-    session: SessionDep,
-    user: CurrentUser,
+    session: Session = Depends(get_session),
 ):
-    """
-    Get a specific course with university details.
-
-    Rate limited for unauthenticated users.
-    """
-    # Rate limiting check
-    client_ip = request.client.host if request.client else "unknown"
-    can_view, remaining = CourseViewTracker.can_view_course(session, user, client_ip)
-
-    if not can_view:
-        raise HTTPException(
-            status_code=403,
-            detail={
-                "message": "You have reached the limit of free course views. Please sign in to continue.",
-                "remaining_views": 0,
-                "requires_auth": True,
-            },
-        )
-
+    """Get a single course with details."""
     course = session.get(Course, course_id)
     if not course:
         raise HTTPException(status_code=404, detail="Course not found")
-
+    
     # Increment view count
     course.view_count += 1
-    session.add(course)
     session.commit()
-    session.refresh(course)
-
-    # Record view for anonymous users
-    if not user:
-        CourseViewTracker.record_view(client_ip)
-
-    return course
+    
+    return enrich_course(course)
 
 
-@router.patch("/{course_id}", response_model=CourseRead)
-def update_course(
+@router.get("/{course_id}/language-requirements", response_model=List[CourseLanguageRequirementRead])
+def get_course_language_requirements(
     course_id: int,
-    updates: CourseUpdate,
-    session: SessionDep,
-    user: CurrentUserRequired,
+    session: Session = Depends(get_session),
 ):
-    """Update a course's information."""
+    """Get language requirements for a course."""
     course = session.get(Course, course_id)
     if not course:
         raise HTTPException(status_code=404, detail="Course not found")
-
-    update_data = updates.model_dump(exclude_unset=True)
-
-    # If updating university_id, verify it exists
-    if "university_id" in update_data:
-        university = session.get(University, update_data["university_id"])
-        if not university:
-            raise HTTPException(status_code=404, detail="University not found")
-
-    for key, value in update_data.items():
-        setattr(course, key, value)
-
-    course.updated_at = datetime.utcnow()
-
-    session.add(course)
-    session.commit()
-    session.refresh(course)
-    return course
+    
+    reqs = session.exec(
+        select(CourseLanguageRequirement)
+        .where(CourseLanguageRequirement.course_id == course_id)
+    ).all()
+    
+    return [CourseLanguageRequirementRead.model_validate(r) for r in reqs]
 
 
-@router.delete("/{course_id}", status_code=204)
-def delete_course(
+@router.get("/{course_id}/stats")
+def get_course_stats(
     course_id: int,
-    session: SessionDep,
-    user: CurrentUserRequired,
+    session: Session = Depends(get_session),
 ):
-    """Delete a course from the catalog."""
+    """Get application stats for a course (from shared profiles)."""
     course = session.get(Course, course_id)
     if not course:
         raise HTTPException(status_code=404, detail="Course not found")
-
-    session.delete(course)
-    session.commit()
+    
+    # This would query the applicant profiles to get stats
+    # For now, return placeholder
+    from app.models import TrackedProgram, ApplicationStatus
+    
+    tracked = session.exec(
+        select(TrackedProgram)
+        .where(TrackedProgram.course_id == course_id)
+        .where(TrackedProgram.shared_as_experience == True)
+    ).all()
+    
+    total = len(tracked)
+    accepted = len([t for t in tracked if t.status == ApplicationStatus.ACCEPTED])
+    rejected = len([t for t in tracked if t.status == ApplicationStatus.REJECTED])
+    
+    return {
+        "course_id": course_id,
+        "total_applications": total,
+        "accepted": accepted,
+        "rejected": rejected,
+        "acceptance_rate": round(accepted / total * 100, 1) if total > 0 else None,
+    }

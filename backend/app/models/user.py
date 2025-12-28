@@ -1,135 +1,111 @@
+"""User model with authentication, onboarding, and tracker integration."""
 from datetime import datetime
-from typing import Optional, TYPE_CHECKING
-from sqlmodel import SQLModel, Field, Relationship
+from typing import Optional, List, TYPE_CHECKING
 from enum import Enum
+from sqlmodel import SQLModel, Field, Relationship, Column
+from sqlalchemy import Enum as SAEnum
 
 if TYPE_CHECKING:
-    from app.models.applicant import Applicant
-    from app.models.tracked_program import TrackedProgram
+    from .tracked_program import TrackedProgram
+    from .ghadam import GhadamTransaction
 
 
-class UserRole(str, Enum):
-    READER = "reader"           # Can only read (needs to pay)
-    CONTRIBUTOR = "contributor" # Has shared their journey
-    ADMIN = "admin"
+class UserGoal(str, Enum):
+    """What brought the user here - determines their flow."""
+    APPLYING = "applying"        # Actively applying → Tracker focus
+    APPLIED = "applied"          # Already applied/accepted → Contribute focus
+    BROWSING = "browsing"        # Just looking around
 
 
-class TransactionType(str, Enum):
-    EARN_PROFILE = "earn_profile"           # Created profile
-    EARN_APPLICATION = "earn_application"   # Added application
-    EARN_DOCUMENT = "earn_document"         # Uploaded document
-    EARN_LANGUAGE = "earn_language"         # Added language score
-    EARN_ACTIVITY = "earn_activity"         # Added activity
-    EARN_VIEW = "earn_view"                 # Someone viewed your profile
-    SPEND_VIEW = "spend_view"               # Paid to view someone
-    SPEND_SUBSCRIBE = "spend_subscribe"     # Subscribed to someone
-    WITHDRAW = "withdraw"                   # Withdrew to real money
-    BONUS = "bonus"                         # Admin bonus
+class OnboardingStep(str, Enum):
+    """Track user's onboarding progress."""
+    SIGNED_UP = "signed_up"
+    GOAL_SELECTED = "goal_selected"
+    FIRST_PROGRAM_ADDED = "first_program_added"
+    PROFILE_STARTED = "profile_started"
+    COMPLETED = "completed"
 
 
 class UserBase(SQLModel):
-    phone: str = Field(max_length=20, unique=True, index=True)
+    phone: str = Field(unique=True, index=True, max_length=20)
     display_name: Optional[str] = Field(default=None, max_length=100)
-    role: UserRole = Field(default=UserRole.READER)
-    is_active: bool = Field(default=True)
+    email: Optional[str] = Field(default=None, max_length=200)
+    
+    # Profile info (optional, for matching)
+    origin_country: Optional[str] = Field(default=None, max_length=100)
+    origin_university: Optional[str] = Field(default=None, max_length=200)
+    field_of_study: Optional[str] = Field(default=None, max_length=200)
+    graduation_year: Optional[int] = Field(default=None)
+    
+    # Onboarding
+    goal: Optional[UserGoal] = Field(default=None, sa_column=Column(SAEnum(UserGoal)))
+    onboarding_step: OnboardingStep = Field(
+        default=OnboardingStep.SIGNED_UP,
+        sa_column=Column(SAEnum(OnboardingStep))
+    )
+    onboarding_completed: bool = Field(default=False)
+    
+    # Ghadam balance
+    ghadam_balance: int = Field(default=0)
+    
+    # Settings
+    email_notifications: bool = Field(default=True)
+    deadline_reminders: bool = Field(default=True)
 
 
 class User(UserBase, table=True):
-    """User account for authentication and wallet."""
     __tablename__ = "users"
     
     id: Optional[int] = Field(default=None, primary_key=True)
-    
-    # Ghadam wallet
-    ghadam_balance: int = Field(default=0, description="Current ghadam balance")
-    total_earned: int = Field(default=0, description="Total ghadams ever earned")
-    total_spent: int = Field(default=0, description="Total ghadams spent")
-    total_withdrawn: int = Field(default=0, description="Total withdrawn to real money")
-    
     created_at: datetime = Field(default_factory=datetime.utcnow)
-    last_login: Optional[datetime] = None
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    last_login_at: Optional[datetime] = Field(default=None)
     
     # Relationships
-    applicant: Optional["Applicant"] = Relationship(back_populates="user")
-    transactions: list["Transaction"] = Relationship(back_populates="user")
-    subscriptions: list["Subscription"] = Relationship(
-        back_populates="subscriber",
-        sa_relationship_kwargs={"foreign_keys": "[Subscription.subscriber_id]"}
-    )
-    # Personal application tracker (private, value-first entry point)
-    tracked_programs: list["TrackedProgram"] = Relationship(back_populates="user")
+    tracked_programs: List["TrackedProgram"] = Relationship(back_populates="user")
+    ghadam_transactions: List["GhadamTransaction"] = Relationship(back_populates="user")
+
 
 class UserCreate(SQLModel):
     phone: str
-    display_name: Optional[str] = None
 
 
-class UserRead(SQLModel):
+class UserRead(UserBase):
     id: int
-    phone: str
-    display_name: Optional[str]
-    role: UserRole
-    ghadam_balance: int
-    total_earned: int
     created_at: datetime
-    
-    class Config:
-        from_attributes = True
+    tracked_programs_count: Optional[int] = None
 
 
-class UserPublic(SQLModel):
-    """Public user info (no phone)."""
-    id: int
-    display_name: Optional[str]
-    role: UserRole
+class UserUpdate(SQLModel):
+    display_name: Optional[str] = None
+    email: Optional[str] = None
+    origin_country: Optional[str] = None
+    origin_university: Optional[str] = None
+    field_of_study: Optional[str] = None
+    graduation_year: Optional[int] = None
+    goal: Optional[UserGoal] = None
+    email_notifications: Optional[bool] = None
+    deadline_reminders: Optional[bool] = None
 
 
-# OTP Model
-class OTP(SQLModel, table=True):
-    """One-time password for SMS verification."""
-    __tablename__ = "otps"
+class UserOnboarding(SQLModel):
+    """Onboarding request - setting user's goal."""
+    goal: UserGoal
+
+
+# OTP for authentication
+class OTPCode(SQLModel, table=True):
+    __tablename__ = "otp_codes"
     
     id: Optional[int] = Field(default=None, primary_key=True)
-    phone: str = Field(max_length=20, index=True)
+    phone: str = Field(index=True, max_length=20)
     code: str = Field(max_length=6)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     expires_at: datetime
-    is_used: bool = Field(default=False)
+    used: bool = Field(default=False)
 
 
-# Transaction Model
-class Transaction(SQLModel, table=True):
-    """Ghadam transaction history."""
-    __tablename__ = "transactions"
-    
-    id: Optional[int] = Field(default=None, primary_key=True)
-    user_id: int = Field(foreign_key="users.id", index=True)
-    
-    transaction_type: TransactionType
-    amount: int = Field(description="Positive for earn, negative for spend")
-    balance_after: int = Field(description="Balance after transaction")
-    
-    # Optional reference to what triggered this
-    reference_type: Optional[str] = Field(default=None, max_length=50)
-    reference_id: Optional[int] = None
-    
-    description: Optional[str] = Field(default=None, max_length=200)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    
-    user: Optional[User] = Relationship(back_populates="transactions")
-
-
-class TransactionRead(SQLModel):
-    id: int
-    transaction_type: TransactionType
-    amount: int
-    balance_after: int
-    description: Optional[str]
-    created_at: datetime
-    
-    class Config:
-        from_attributes = True
-
-
-# Import for relationship
-from app.models.subscription import Subscription
+# Signup bonus
+SIGNUP_BONUS_GHADAMS = 30  # Enough to view ~1 profile
+FIRST_PROGRAM_BONUS = 10
+COMPLETE_ONBOARDING_BONUS = 10

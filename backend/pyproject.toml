@@ -1,7 +1,7 @@
 [project]
-name = "apply-srbiau"
+name = "apply"
 version = "0.1.0"
-description = "Student application journey sharing platform - Learn from those who applied before you"
+description = "Ghadam - University Application Tracker"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [

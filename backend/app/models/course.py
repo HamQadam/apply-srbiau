@@ -1,90 +1,169 @@
+"""Course/Program model with structured requirements and tuition."""
 from datetime import datetime, date
-from typing import Optional, TYPE_CHECKING
-from sqlmodel import SQLModel, Field, Relationship
-from app.models.application import DegreeLevel
+from typing import Optional, List, TYPE_CHECKING
+from enum import Enum
+from sqlmodel import SQLModel, Field, Relationship, Column
+from sqlalchemy import Enum as SAEnum
 
 if TYPE_CHECKING:
-    from app.models.university import University
+    from .university import University
+    from .course_language_requirement import CourseLanguageRequirement
+    from .tracked_program import TrackedProgram
+
+
+class DegreeLevel(str, Enum):
+    BACHELOR = "bachelor"
+    MASTER = "master"
+    PHD = "phd"
+    DIPLOMA = "diploma"
+    CERTIFICATE = "certificate"
+
+
+class Currency(str, Enum):
+    EUR = "EUR"
+    USD = "USD"
+    CAD = "CAD"
+    AUD = "AUD"
+    GBP = "GBP"
+    CHF = "CHF"
+    SEK = "SEK"
+    NOK = "NOK"
+    DKK = "DKK"
+    JPY = "JPY"
+    CNY = "CNY"
+
+
+class TeachingLanguage(str, Enum):
+    ENGLISH = "english"
+    GERMAN = "german"
+    FRENCH = "french"
+    DUTCH = "dutch"
+    SPANISH = "spanish"
+    ITALIAN = "italian"
+    SWEDISH = "swedish"
+    NORWEGIAN = "norwegian"
+    DANISH = "danish"
+    FINNISH = "finnish"
+    POLISH = "polish"
+    CZECH = "czech"
+    JAPANESE = "japanese"
+    CHINESE = "chinese"
+    KOREAN = "korean"
+    OTHER = "other"
+
+
+class IntakeType(str, Enum):
+    FALL = "fall"
+    SPRING = "spring"
+    WINTER = "winter"
+    SUMMER = "summer"
+    ROLLING = "rolling"
 
 
 class CourseBase(SQLModel):
-    """Base course fields for global course catalog."""
-    course_name: str = Field(max_length=300, index=True, description="Name of the course/program")
-    department: Optional[str] = Field(default=None, max_length=200, description="Department offering the course")
-    degree_level: DegreeLevel = Field(index=True, description="masters, phd, mba, postdoc")
-
-    # Course details
-    website_url: Optional[str] = Field(default=None, max_length=500, description="Program-specific URL")
-    description: Optional[str] = Field(default=None, max_length=3000, description="Course description and curriculum overview")
-
-    # Requirements
-    language_requirements: Optional[str] = Field(default=None, max_length=500, description="e.g., IELTS 6.5, TOEFL 90")
-    minimum_gpa: Optional[str] = Field(default=None, max_length=50, description="Minimum GPA requirement")
-    application_deadline: Optional[date] = Field(default=None, description="General application deadline")
-    tuition_fees: Optional[str] = Field(default=None, max_length=200, description="Tuition fee information")
-
-    # Additional info
-    duration_months: Optional[int] = Field(default=None, description="Program duration in months")
-    scholarships_available: bool = Field(default=False, description="Whether scholarships are available")
-    notes: Optional[str] = Field(default=None, max_length=1000, description="Additional notes or tips")
+    # Basic info
+    name: str = Field(max_length=300, index=True)
+    degree_level: DegreeLevel = Field(sa_column=Column(SAEnum(DegreeLevel)))
+    field: str = Field(max_length=200, index=True)  # Normalized field: "Computer Science", "Data Science"
+    
+    # Teaching
+    teaching_language: TeachingLanguage = Field(sa_column=Column(SAEnum(TeachingLanguage)))
+    duration_months: Optional[int] = Field(default=None, ge=1, le=120)
+    credits_ects: Optional[int] = Field(default=None)  # ECTS credits if applicable
+    
+    # Tuition - structured for filtering
+    tuition_fee_amount: Optional[int] = Field(default=None, ge=0)  # Annual amount
+    tuition_fee_currency: Optional[Currency] = Field(default=None, sa_column=Column(SAEnum(Currency)))
+    tuition_fee_per: str = Field(default="year", max_length=20)  # "year", "semester", "total"
+    is_tuition_free: bool = Field(default=False)  # For free programs (Germany, Norway, etc.)
+    
+    # Deadlines
+    deadline_fall: Optional[date] = Field(default=None)
+    deadline_spring: Optional[date] = Field(default=None)
+    deadline_notes: Optional[str] = Field(default=None, max_length=500)  # "EU: March 1, Non-EU: January 15"
+    
+    # Academic requirements
+    gpa_minimum: Optional[float] = Field(default=None, ge=0, le=4.0)  # On 4.0 scale
+    gpa_scale: str = Field(default="4.0", max_length=10)  # "4.0", "20", "100", etc.
+    gre_required: bool = Field(default=False)
+    gre_minimum: Optional[int] = Field(default=None)  # Combined score
+    gmat_required: bool = Field(default=False)
+    gmat_minimum: Optional[int] = Field(default=None)
+    work_experience_months: Optional[int] = Field(default=None, ge=0)
+    
+    # Scholarships & funding
+    scholarships_available: bool = Field(default=False)
+    scholarship_details: Optional[str] = Field(default=None, max_length=1000)
+    
+    # Links
+    program_url: Optional[str] = Field(default=None, max_length=500)
+    application_url: Optional[str] = Field(default=None, max_length=500)
+    
+    # Meta
+    description: Optional[str] = Field(default=None, max_length=3000)
+    notes: Optional[str] = Field(default=None, max_length=1000)
+    
+    # Verification
+    last_verified_at: Optional[datetime] = Field(default=None)
+    verified_by_count: int = Field(default=0)  # Community verification count
 
 
 class Course(CourseBase, table=True):
-    """Database table for courses."""
     __tablename__ = "courses"
-
+    
     id: Optional[int] = Field(default=None, primary_key=True)
     university_id: int = Field(foreign_key="universities.id", index=True)
-
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
-
-    # Stats for rate limiting and analytics
-    view_count: int = Field(default=0, description="Total number of views (for analytics)")
-
+    view_count: int = Field(default=0)
+    
     # Relationships
-    university: Optional["University"] = Relationship(back_populates="courses")
+    university: "University" = Relationship(back_populates="courses")
+    language_requirements: List["CourseLanguageRequirement"] = Relationship(back_populates="course")
+    tracked_by: List["TrackedProgram"] = Relationship(back_populates="course")
 
 
 class CourseCreate(CourseBase):
-    """Schema for creating a course."""
     university_id: int
 
 
 class CourseRead(CourseBase):
-    """Schema for reading course data."""
     id: int
     university_id: int
     created_at: datetime
-    updated_at: datetime
     view_count: int
-
-    class Config:
-        from_attributes = True
-
-
-class CourseReadWithUniversity(CourseRead):
-    """Course with related university data."""
-    university: "UniversityRead"
+    
+    # Joined data
+    university_name: Optional[str] = None
+    university_country: Optional[str] = None
+    university_city: Optional[str] = None
+    university_ranking_qs: Optional[int] = None
 
 
-class CourseUpdate(SQLModel):
-    """Schema for updating course - all fields optional."""
-    course_name: Optional[str] = Field(default=None, max_length=300)
-    department: Optional[str] = Field(default=None, max_length=200)
+class CourseSearch(SQLModel):
+    """Search/filter parameters for courses."""
+    query: Optional[str] = None
+    field: Optional[str] = None
     degree_level: Optional[DegreeLevel] = None
-    website_url: Optional[str] = Field(default=None, max_length=500)
-    description: Optional[str] = Field(default=None, max_length=3000)
-    language_requirements: Optional[str] = Field(default=None, max_length=500)
-    minimum_gpa: Optional[str] = Field(default=None, max_length=50)
-    application_deadline: Optional[date] = None
-    tuition_fees: Optional[str] = Field(default=None, max_length=200)
-    duration_months: Optional[int] = None
-    scholarships_available: Optional[bool] = None
-    notes: Optional[str] = Field(default=None, max_length=1000)
+    country: Optional[str] = None
+    teaching_language: Optional[TeachingLanguage] = None
+    max_tuition: Optional[int] = None  # In EUR equivalent
+    tuition_free_only: bool = False
+    scholarships_only: bool = False
+    gre_not_required: bool = False
+    max_gpa_required: Optional[float] = None
     university_id: Optional[int] = None
+    deadline_after: Optional[date] = None
+    deadline_before: Optional[date] = None
+    limit: int = Field(default=20, le=100)
+    offset: int = Field(default=0, ge=0)
 
 
-# Import for type hints
-from app.models.university import UniversityRead
-CourseReadWithUniversity.model_rebuild()
+class CourseSummary(SQLModel):
+    """Minimal course info for lists and autocomplete."""
+    id: int
+    name: str
+    degree_level: DegreeLevel
+    university_name: str
+    university_country: str
+    deadline_fall: Optional[date] = None

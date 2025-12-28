@@ -1,137 +1,126 @@
+"""Authentication service - JWT tokens and OTP verification."""
+import random
+import string
 from datetime import datetime, timedelta
 from typing import Optional
-import secrets
-
-from jose import JWTError, jwt
+import jwt
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlmodel import Session, select
 
+from app.database import get_session
 from app.config import get_settings
-from app.models import User, OTP
+from app.models import User, OTPCode
 
 settings = get_settings()
-
-# JWT Configuration
-SECRET_KEY = settings.secret_key
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
-
-# Debug mode - all OTPs are 000000
-DEBUG_MODE = True
-
-
-def create_access_token(user_id: int, expires_delta: Optional[timedelta] = None) -> str:
-    """Create JWT access token."""
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-    else:
-        expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    
-    to_encode = {
-        "sub": str(user_id),
-        "exp": expire,
-        "type": "access",
-    }
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-
-
-def verify_token(token: str) -> Optional[int]:
-    """Verify JWT token and return user_id."""
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id = payload.get("sub")
-        if user_id is None:
-            return None
-        return int(user_id)
-    except JWTError:
-        return None
+security = HTTPBearer(auto_error=False)
 
 
 def generate_otp() -> str:
     """Generate 6-digit OTP code."""
-    if DEBUG_MODE:
+    if settings.debug_otp:
         return "000000"
-    return "".join([str(secrets.randbelow(10)) for _ in range(6)])
+    return "".join(random.choices(string.digits, k=6))
 
 
-def create_otp(session: Session, phone: str) -> OTP:
+def create_otp(session: Session, phone: str) -> str:
     """Create and store OTP for phone number."""
-    # Invalidate old OTPs
-    old_otps = session.exec(
-        select(OTP).where(OTP.phone == phone, OTP.is_used == False)
-    ).all()
-    for otp in old_otps:
-        otp.is_used = True
-        session.add(otp)
-    
-    # Create new OTP
     code = generate_otp()
-    otp = OTP(
+    expires_at = datetime.utcnow() + timedelta(minutes=settings.otp_expire_minutes)
+    
+    otp = OTPCode(
         phone=phone,
         code=code,
-        expires_at=datetime.utcnow() + timedelta(minutes=5),
+        expires_at=expires_at,
     )
     session.add(otp)
     session.commit()
-    session.refresh(otp)
     
-    return otp
+    return code
 
 
 def verify_otp(session: Session, phone: str, code: str) -> bool:
     """Verify OTP code for phone number."""
     otp = session.exec(
-        select(OTP).where(
-            OTP.phone == phone,
-            OTP.code == code,
-            OTP.is_used == False,
-            OTP.expires_at > datetime.utcnow(),
-        )
+        select(OTPCode)
+        .where(OTPCode.phone == phone)
+        .where(OTPCode.code == code)
+        .where(OTPCode.used == False)
+        .where(OTPCode.expires_at > datetime.utcnow())
+        .order_by(OTPCode.created_at.desc())
     ).first()
     
     if not otp:
         return False
     
-    # Mark as used
-    otp.is_used = True
-    session.add(otp)
+    otp.used = True
     session.commit()
-    
     return True
 
 
-def get_or_create_user(session: Session, phone: str) -> User:
-    """Get existing user or create new one."""
-    user = session.exec(select(User).where(User.phone == phone)).first()
+def create_access_token(user_id: int) -> str:
+    """Create JWT token for user."""
+    payload = {
+        "sub": str(user_id),
+        "exp": datetime.utcnow() + timedelta(minutes=settings.jwt_expire_minutes),
+        "iat": datetime.utcnow(),
+    }
+    return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
+
+
+def decode_token(token: str) -> Optional[int]:
+    """Decode JWT token and return user_id."""
+    try:
+        payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
+        return int(payload["sub"])
+    except (jwt.ExpiredSignatureError, jwt.InvalidTokenError, KeyError, ValueError):
+        return None
+
+
+async def get_current_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    session: Session = Depends(get_session),
+) -> User:
+    """Dependency to get current authenticated user."""
+    if not credentials:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     
+    user_id = decode_token(credentials.credentials)
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    user = session.get(User, user_id)
     if not user:
-        user = User(phone=phone)
-        session.add(user)
-        session.commit()
-        session.refresh(user)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found",
+        )
     
     # Update last login
-    user.last_login = datetime.utcnow()
-    session.add(user)
+    user.last_login_at = datetime.utcnow()
     session.commit()
-    session.refresh(user)
     
     return user
 
 
-def send_sms_otp(phone: str, code: str) -> bool:
-    """
-    Send OTP via SMS.
+async def get_optional_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    session: Session = Depends(get_session),
+) -> Optional[User]:
+    """Dependency to optionally get current user (for public endpoints)."""
+    if not credentials:
+        return None
     
-    TODO: Integrate with actual SMS provider (Kavenegar, etc.)
-    For now, just print to console in debug mode.
-    """
-    if DEBUG_MODE:
-        print(f"[DEBUG] OTP for {phone}: {code}")
-        return True
+    user_id = decode_token(credentials.credentials)
+    if not user_id:
+        return None
     
-    # TODO: Implement real SMS sending
-    # Example with Kavenegar:
-    # api = KavenegarAPI(settings.kavenegar_api_key)
-    # api.verify_lookup(phone, code, template="verify")
-    
-    return True
+    return session.get(User, user_id)

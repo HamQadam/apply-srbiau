@@ -1,242 +1,133 @@
 import { api } from './client';
 import type {
-  Applicant,
-  ApplicantCreate,
-  ApplicantFull,
-  LanguageCredential,
-  LanguageCredentialCreate,
-  Document,
-  ExtracurricularActivity,
-  ExtracurricularActivityCreate,
-  Application,
-  ApplicationCreate,
-  UniversityStat,
-  CountryStat,
+  User,
+  AuthResponse,
   University,
-  UniversityCreate,
-  UniversityWithCourses,
   Course,
-  CourseCreate,
-  CourseWithUniversity,
-  CourseAccessStatus,
+  CourseSummary,
+  TrackedProgram,
+  TrackerStats,
+  DeadlineItem,
+  GhadamTransaction,
+  CreateTrackedProgramRequest,
+  UpdateTrackedProgramRequest,
+  UserGoal,
+  ApplicationStatus,
+  Priority,
 } from '../types';
 
-// Applicants
-export const applicantsApi = {
-  list: (params?: { university?: string; major?: string; graduation_year?: number }) => {
-    const query = new URLSearchParams();
-    if (params?.university) query.set('university', params.university);
-    if (params?.major) query.set('major', params.major);
-    if (params?.graduation_year) query.set('graduation_year', String(params.graduation_year));
-    const qs = query.toString();
-    return api.get<Applicant[]>(`/applicants/${qs ? `?${qs}` : ''}`);
-  },
+// Auth
+export const authApi = {
+  requestOTP: (phone: string) =>
+    api.post<{ message: string; debug_code?: string }>('/auth/request-otp', { phone }),
   
-  get: (id: number) => api.get<Applicant>(`/applicants/${id}`),
+  verifyOTP: (phone: string, code: string) =>
+    api.post<AuthResponse>('/auth/verify-otp', { phone, code }),
   
-  getFull: (id: number) => api.get<ApplicantFull>(`/applicants/${id}/full`),
+  getMe: () => api.get<User>('/auth/me'),
   
-  create: (data: ApplicantCreate) => api.post<Applicant>('/applicants/', data),
+  updateMe: (data: Partial<User>) => api.patch<User>('/auth/me', data),
   
-  update: (id: number, data: Partial<ApplicantCreate>) =>
-    api.patch<Applicant>(`/applicants/${id}`, data),
+  setGoal: (goal: UserGoal) => api.post<User>('/auth/onboarding', { goal }),
   
-  delete: (id: number) => api.delete(`/applicants/${id}`),
+  completeOnboarding: () => api.post<User>('/auth/onboarding/complete'),
 };
 
-// Language Credentials
-export const languagesApi = {
-  list: (applicantId: number) =>
-    api.get<LanguageCredential[]>(`/applicants/${applicantId}/languages/`),
-  
-  create: (applicantId: number, data: LanguageCredentialCreate) =>
-    api.post<LanguageCredential>(`/applicants/${applicantId}/languages/`, data),
-  
-  update: (applicantId: number, id: number, data: Partial<LanguageCredentialCreate>) =>
-    api.patch<LanguageCredential>(`/applicants/${applicantId}/languages/${id}`, data),
-  
-  delete: (applicantId: number, id: number) =>
-    api.delete(`/applicants/${applicantId}/languages/${id}`),
-  
-  search: (params?: { test_type?: string; language?: string }) => {
-    const query = new URLSearchParams();
-    if (params?.test_type) query.set('test_type', params.test_type);
-    if (params?.language) query.set('language', params.language);
-    const qs = query.toString();
-    return api.get<LanguageCredential[]>(`/languages/${qs ? `?${qs}` : ''}`);
-  },
-};
-
-// Documents
-export const documentsApi = {
-  list: (applicantId: number) =>
-    api.get<Document[]>(`/applicants/${applicantId}/documents/`),
-  
-  upload: (applicantId: number, file: File, metadata: {
-    document_type: string;
-    title: string;
-    description?: string;
-    is_public?: boolean;
-    used_for_university?: string;
-    used_for_program?: string;
-  }) => {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('document_type', metadata.document_type);
-    formData.append('title', metadata.title);
-    if (metadata.description) formData.append('description', metadata.description);
-    if (metadata.is_public !== undefined) formData.append('is_public', String(metadata.is_public));
-    if (metadata.used_for_university) formData.append('used_for_university', metadata.used_for_university);
-    if (metadata.used_for_program) formData.append('used_for_program', metadata.used_for_program);
-    return api.upload<Document>(`/applicants/${applicantId}/documents/`, formData);
+// Tracker
+export const trackerApi = {
+  listPrograms: (status?: ApplicationStatus, priority?: Priority) => {
+    const params = new URLSearchParams();
+    if (status) params.set('status', status);
+    if (priority) params.set('priority', priority);
+    const query = params.toString();
+    return api.get<TrackedProgram[]>(`/tracker/programs${query ? `?${query}` : ''}`);
   },
   
-  delete: (applicantId: number, id: number) =>
-    api.delete(`/applicants/${applicantId}/documents/${id}`),
+  getProgram: (id: number) => api.get<TrackedProgram>(`/tracker/programs/${id}`),
   
-  getDownloadUrl: (applicantId: number, id: number) =>
-    `/api/v1/applicants/${applicantId}/documents/${id}/download`,
+  addProgram: (data: CreateTrackedProgramRequest) =>
+    api.post<TrackedProgram>('/tracker/programs', data),
   
-  search: (params?: { document_type?: string; university?: string }) => {
-    const query = new URLSearchParams();
-    if (params?.document_type) query.set('document_type', params.document_type);
-    if (params?.university) query.set('university', params.university);
-    const qs = query.toString();
-    return api.get<Document[]>(`/documents/${qs ? `?${qs}` : ''}`);
-  },
-};
-
-// Activities
-export const activitiesApi = {
-  list: (applicantId: number, activityType?: string) => {
-    const query = activityType ? `?activity_type=${activityType}` : '';
-    return api.get<ExtracurricularActivity[]>(`/applicants/${applicantId}/activities/${query}`);
-  },
+  updateProgram: (id: number, data: UpdateTrackedProgramRequest) =>
+    api.patch<TrackedProgram>(`/tracker/programs/${id}`, data),
   
-  create: (applicantId: number, data: ExtracurricularActivityCreate) =>
-    api.post<ExtracurricularActivity>(`/applicants/${applicantId}/activities/`, data),
+  deleteProgram: (id: number) => api.delete<{ ok: boolean }>(`/tracker/programs/${id}`),
   
-  update: (applicantId: number, id: number, data: Partial<ExtracurricularActivityCreate>) =>
-    api.patch<ExtracurricularActivity>(`/applicants/${applicantId}/activities/${id}`, data),
+  getStats: () => api.get<TrackerStats>('/tracker/stats'),
   
-  delete: (applicantId: number, id: number) =>
-    api.delete(`/applicants/${applicantId}/activities/${id}`),
+  getDeadlines: (days = 90) => api.get<DeadlineItem[]>(`/tracker/deadlines?days=${days}`),
   
-  search: (params?: { activity_type?: string; organization?: string }) => {
-    const query = new URLSearchParams();
-    if (params?.activity_type) query.set('activity_type', params.activity_type);
-    if (params?.organization) query.set('organization', params.organization);
-    const qs = query.toString();
-    return api.get<ExtracurricularActivity[]>(`/activities/${qs ? `?${qs}` : ''}`);
-  },
-};
-
-// Applications
-export const applicationsApi = {
-  list: (applicantId: number, params?: { status?: string; year?: number }) => {
-    const query = new URLSearchParams();
-    if (params?.status) query.set('status', params.status);
-    if (params?.year) query.set('year', String(params.year));
-    const qs = query.toString();
-    return api.get<Application[]>(`/applicants/${applicantId}/applications/${qs ? `?${qs}` : ''}`);
-  },
-  
-  create: (applicantId: number, data: ApplicationCreate) =>
-    api.post<Application>(`/applicants/${applicantId}/applications/`, data),
-  
-  update: (applicantId: number, id: number, data: Partial<ApplicationCreate>) =>
-    api.patch<Application>(`/applicants/${applicantId}/applications/${id}`, data),
-  
-  delete: (applicantId: number, id: number) =>
-    api.delete(`/applicants/${applicantId}/applications/${id}`),
-  
-  search: (params?: {
-    university?: string;
-    country?: string;
-    program?: string;
-    status?: string;
-    degree_level?: string;
-    year?: number;
-    scholarship_received?: boolean;
-  }) => {
-    const query = new URLSearchParams();
-    if (params?.university) query.set('university', params.university);
-    if (params?.country) query.set('country', params.country);
-    if (params?.program) query.set('program', params.program);
-    if (params?.status) query.set('status', params.status);
-    if (params?.degree_level) query.set('degree_level', params.degree_level);
-    if (params?.year) query.set('year', String(params.year));
-    if (params?.scholarship_received !== undefined) 
-      query.set('scholarship_received', String(params.scholarship_received));
-    const qs = query.toString();
-    return api.get<Application[]>(`/applications/${qs ? `?${qs}` : ''}`);
-  },
-  
-  statsByUniversity: (year?: number) => {
-    const query = year ? `?year=${year}` : '';
-    return api.get<UniversityStat[]>(`/applications/stats/by-university${query}`);
-  },
-  
-  statsByCountry: (year?: number) => {
-    const query = year ? `?year=${year}` : '';
-    return api.get<CountryStat[]>(`/applications/stats/by-country${query}`);
-  },
+  updateChecklist: (id: number, checklist: Array<{ name: string; required: boolean; completed: boolean }>) =>
+    api.patch<{ ok: boolean }>(`/tracker/programs/${id}/checklist`, checklist),
 };
 
 // Universities
-export const universitiesApi = {
-  list: (params?: { name?: string; country?: string; city?: string; skip?: number; limit?: number }) => {
-    const query = new URLSearchParams();
-    if (params?.name) query.set('name', params.name);
-    if (params?.country) query.set('country', params.country);
-    if (params?.city) query.set('city', params.city);
-    if (params?.skip) query.set('skip', String(params.skip));
-    if (params?.limit) query.set('limit', String(params.limit));
-    const qs = query.toString();
-    return api.get<University[]>(`/universities/${qs ? `?${qs}` : ''}`);
+export const universityApi = {
+  list: (params?: { query?: string; country?: string; limit?: number }) => {
+    const searchParams = new URLSearchParams();
+    if (params?.query) searchParams.set('query', params.query);
+    if (params?.country) searchParams.set('country', params.country);
+    if (params?.limit) searchParams.set('limit', String(params.limit));
+    const query = searchParams.toString();
+    return api.get<University[]>(`/universities${query ? `?${query}` : ''}`);
   },
-
+  
   get: (id: number) => api.get<University>(`/universities/${id}`),
-
-  getWithCourses: (id: number) => api.get<UniversityWithCourses>(`/universities/${id}/with-courses`),
-
-  create: (data: UniversityCreate) => api.post<University>('/universities/', data),
-
-  update: (id: number, data: Partial<UniversityCreate>) =>
-    api.patch<University>(`/universities/${id}`, data),
-
-  delete: (id: number) => api.delete(`/universities/${id}`),
+  
+  getCountries: () => api.get<Array<{ country: string; count: number }>>('/universities/countries'),
+  
+  getCourses: (id: number) => api.get<Course[]>(`/universities/${id}/courses`),
 };
 
 // Courses
-export const coursesApi = {
-  list: (params?: {
-    university_id?: number;
-    degree_level?: string;
+export const courseApi = {
+  search: (params?: {
+    query?: string;
+    field?: string;
     country?: string;
-    course_name?: string;
-    skip?: number;
+    degree_level?: string;
+    tuition_free_only?: boolean;
     limit?: number;
   }) => {
-    const query = new URLSearchParams();
-    if (params?.university_id) query.set('university_id', String(params.university_id));
-    if (params?.degree_level) query.set('degree_level', params.degree_level);
-    if (params?.country) query.set('country', params.country);
-    if (params?.course_name) query.set('course_name', params.course_name);
-    if (params?.skip) query.set('skip', String(params.skip));
-    if (params?.limit) query.set('limit', String(params.limit));
-    const qs = query.toString();
-    return api.get<CourseWithUniversity[]>(`/courses/${qs ? `?${qs}` : ''}`);
+    const searchParams = new URLSearchParams();
+    if (params?.query) searchParams.set('query', params.query);
+    if (params?.field) searchParams.set('field', params.field);
+    if (params?.country) searchParams.set('country', params.country);
+    if (params?.degree_level) searchParams.set('degree_level', params.degree_level);
+    if (params?.tuition_free_only) searchParams.set('tuition_free_only', 'true');
+    if (params?.limit) searchParams.set('limit', String(params.limit));
+    const query = searchParams.toString();
+    return api.get<Course[]>(`/courses${query ? `?${query}` : ''}`);
   },
+  
+  autocomplete: (q: string) => api.get<CourseSummary[]>(`/courses/autocomplete?q=${encodeURIComponent(q)}`),
+  
+  get: (id: number) => api.get<Course>(`/courses/${id}`),
+  
+  getFields: () => api.get<Array<{ field: string; count: number }>>('/courses/fields'),
+  
+  getStats: (id: number) => api.get<{
+    course_id: number;
+    total_applications: number;
+    accepted: number;
+    rejected: number;
+    acceptance_rate: number | null;
+  }>(`/courses/${id}/stats`),
+};
 
-  get: (id: number) => api.get<CourseWithUniversity>(`/courses/${id}`),
-
-  checkAccess: () => api.get<CourseAccessStatus>('/courses/check-access'),
-
-  create: (data: CourseCreate) => api.post<Course>('/courses/', data),
-
-  update: (id: number, data: Partial<CourseCreate>) =>
-    api.patch<Course>(`/courses/${id}`, data),
-
-  delete: (id: number) => api.delete(`/courses/${id}`),
+// Ghadam
+export const ghadamApi = {
+  getBalance: () => api.get<{ balance: number; user_id: number }>('/ghadam/balance'),
+  
+  getTransactions: (limit = 20, offset = 0) =>
+    api.get<GhadamTransaction[]>(`/ghadam/transactions?limit=${limit}&offset=${offset}`),
+  
+  getPricing: () => api.get<{
+    profile_view_cost: number;
+    contributor_share: number;
+    rewards: Record<string, number>;
+  }>('/ghadam/pricing'),
+  
+  purchaseView: (profileId: number) =>
+    api.post<{ ok: boolean; new_balance: number }>(`/ghadam/purchase-view/${profileId}`),
 };

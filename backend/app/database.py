@@ -1,3 +1,4 @@
+"""Database connection and session management."""
 from sqlmodel import SQLModel, create_engine, Session
 from app.config import get_settings
 
@@ -21,3 +22,7 @@ def get_session():
     """Dependency for FastAPI routes."""
     with Session(engine) as session:
         yield session
+
+def create_db_and_tables():
+    """Create all tables - use migrations in production."""
+    SQLModel.metadata.create_all(engine)
