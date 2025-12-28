@@ -2,9 +2,6 @@ FROM ghcr.io/astral-sh/uv:python3.12-bookworm AS builder
 WORKDIR /app
 
 COPY pyproject.toml ./
-# If you have uv.lock, copy it too (recommended)
-# COPY uv.lock ./
-
 RUN uv sync --no-dev
 
 COPY daad_ingestor ./daad_ingestor
@@ -17,5 +14,8 @@ COPY --from=builder /app/daad_ingestor /app/daad_ingestor
 
 ENV PATH="/app/.venv/bin:$PATH"
 ENV PYTHONUNBUFFERED=1
+
+# required at runtime:
+# ENV DATABASE_URL=postgresql://user:pass@host:5432/dbname
 
 CMD ["daad-ingest", "ingest"]
