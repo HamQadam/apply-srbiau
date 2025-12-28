@@ -126,7 +126,7 @@ export function AddProgramPage() {
             <div className="space-y-3">
               <div className="text-sm font-medium text-gray-900">جستجو در برنامه‌ها</div>
               <ProgramSearch
-                onSelect={(c) => {
+                onSelect={(c: CourseWithUniversity) => {
                   setSelected(c);
                   if (!deadline && c.application_deadline) setDeadline(c.application_deadline);
                 }}

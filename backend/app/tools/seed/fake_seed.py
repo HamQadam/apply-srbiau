@@ -77,7 +77,6 @@ class ApplyApiClient:
             raise ApiError(f"Request failed {method} {url}: {e}") from e
 
         if r.status_code not in expected:
-            # Try to include response body for debugging
             body = r.text
             raise ApiError(
                 f"Unexpected status {r.status_code} for {method} {url}\n"
@@ -88,7 +87,6 @@ class ApplyApiClient:
         if r.status_code == 204:
             return None
 
-        # Some endpoints might return empty JSON {} or plain text; be tolerant:
         ct = (r.headers.get("content-type") or "").lower()
         if "application/json" in ct:
             return r.json()
@@ -99,7 +97,7 @@ class ApplyApiClient:
 
 
 # ----------------------------
-# Fake data factory (consistent + schema-aware)
+# Fake data factory
 # ----------------------------
 
 class DataFactory:
@@ -162,9 +160,19 @@ class DataFactory:
             ("German", "TestDaF"),
         ]
 
+        # Tracker-specific
+        self.tracker_statuses = [
+            "researching", "preparing", "submitted", "interview",
+            "accepted", "rejected", "waitlisted",
+        ]
+        self.tracker_priorities = ["reach", "target", "safety"]
+        self.checklist_templates = [
+            ["SOP", "CV", "Transcript", "Recommendation Letters", "Portfolio"],
+            ["SOP", "CV", "Transcript", "IELTS/TOEFL", "GRE (if needed)"],
+            ["Motivation Letter", "CV", "Transcript", "Recommendation Letters"],
+        ]
+
     def phone_ir_like(self) -> str:
-        # Keep it simple; your backend likely validates basic pattern only.
-        # Example: +98912xxxxxxx
         return "+98" + "9" + "".join(random.choice(string.digits) for _ in range(10))
 
     def applicant_create(self) -> Dict[str, Any]:
@@ -180,7 +188,6 @@ class DataFactory:
         )
 
         gpa_scale = random.choice(["4.0", "20", "100"])
-        overall_gpa = None
         if gpa_scale == "4.0":
             overall_gpa = f"{round(random.uniform(2.8, 3.95), 2)}/4.0"
         elif gpa_scale == "20":
@@ -286,7 +293,6 @@ class DataFactory:
         known_university: Optional[Dict[str, Any]] = None,
         known_course: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
-        # Program name: prefer a known course, else synthesize something plausible
         if known_course:
             program_name = known_course.get("course_name") or "MSc Computer Science"
             degree_level = known_course.get("degree_level") or "masters"
@@ -324,7 +330,6 @@ class DataFactory:
             university_id = known_university.get("id")
         else:
             uni_name, country = random.choice(self.target_universities)
-            # choose a city consistent with country
             cities = [cs for (cty, cs) in self.target_countries if cty == country]
             city = random.choice(cities[0] if cities else ["City"])
 
@@ -342,7 +347,7 @@ class DataFactory:
             "city": city[:100] if city else None,
             "program_name": program_name[:300],
             "department": random.choice(["Computer Science", "Engineering", "AI", None]),
-            "degree_level": degree_level,  # enum: masters/phd/mba/postdoc
+            "degree_level": degree_level,
             "application_year": application_year,
             "application_round": random.choice([f"Fall {application_year}", f"Spring {application_year}", None]),
             "application_deadline": deadline.isoformat(),
@@ -416,7 +421,6 @@ class DataFactory:
             "other": "Document",
         }[doc_type]
 
-        # Simple “files”: small PDF-ish bytes or plaintext
         content = b"%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF\n"
         filename = f"{doc_type}.pdf"
         mime = "application/pdf"
@@ -432,6 +436,67 @@ class DataFactory:
             "file": (filename, BytesIO(content), mime),
         }
         return data, files
+
+    # -------- Tracker payload --------
+    def tracked_program_create(
+        self,
+        *,
+        known_university: Optional[Dict[str, Any]] = None,
+        known_course: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        status = random.choice(self.tracker_statuses)
+        priority = random.choice(self.tracker_priorities)
+
+        # future deadline window (value-first)
+        deadline = date.today() + timedelta(days=random.randint(10, 210))
+
+        checklist_names = random.choice(self.checklist_templates)
+        checklist = [{"name": n, "done": (random.random() < 0.35)} for n in checklist_names]
+
+        notes = None
+        if random.random() < 0.65:
+            notes = random.choice([
+                "Need to finalize SOP + reach out for recommendations.",
+                "Shortlisted. Working on CV + portfolio + transcript translation.",
+                "Waiting for GRE decision; focusing on IELTS meanwhile.",
+            ])
+
+        if known_course and known_course.get("id"):
+            # Use catalog entry: course_id only, backend will infer university/country
+            return {
+                "course_id": int(known_course["id"]),
+                "deadline": deadline.isoformat(),
+                "status": status,
+                "priority": priority,
+                "notes": notes,
+                "documents_checklist": checklist,
+            }
+
+        # Custom entry
+        if known_university:
+            uni_name = known_university.get("name") or "Unknown University"
+            country = known_university.get("country") or "Unknown Country"
+        else:
+            uni_name, country = random.choice(self.target_universities)
+
+        custom_program_name = random.choice([
+            "MSc Computer Science",
+            "MSc Data Science",
+            "MSc Artificial Intelligence",
+            "MSc Big Data Engineering",
+            "PhD Computer Science",
+        ])
+
+        return {
+            "custom_program_name": custom_program_name,
+            "university_name": uni_name,
+            "country": country,
+            "deadline": deadline.isoformat(),
+            "status": status,
+            "priority": priority,
+            "notes": notes,
+            "documents_checklist": checklist,
+        }
 
 
 # ----------------------------
@@ -471,7 +536,6 @@ class Seeder:
         c = self.api.with_token(token)
 
         if display_name:
-            # update-profile uses query param `display_name`
             try:
                 _ = c.request(
                     "PATCH",
@@ -513,6 +577,34 @@ class Seeder:
             return course
         except ApiError as e:
             self.log(f"[warn] create_course not allowed or failed (skipping courses): {e}")
+            return None
+
+    # -------- Tracker --------
+    def add_tracked_program(
+        self,
+        client: ApplyApiClient,
+        *,
+        known_university: Optional[Dict[str, Any]] = None,
+        known_course: Optional[Dict[str, Any]] = None,
+    ) -> Optional[Dict[str, Any]]:
+        payload = self.f.tracked_program_create(
+            known_university=known_university,
+            known_course=known_course,
+        )
+        try:
+            tp = client.request(
+                "POST",
+                "/api/v1/tracker/programs",
+                json_body=payload,
+                expected=(200, 201),
+            )
+            self.log(
+                f"[tracker] created id={tp.get('id')} "
+                f"uni={tp.get('university_name')} status={tp.get('status')}"
+            )
+            return tp
+        except ApiError as e:
+            self.log(f"[warn] add_tracked_program failed (skipping tracker): {e}")
             return None
 
     def create_applicant(self, client: ApplyApiClient) -> Dict[str, Any]:
@@ -621,6 +713,10 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--docs-per-applicant", type=int, default=2)
     p.add_argument("--apps-per-applicant", type=int, default=4)
 
+    # Tracker additions
+    p.add_argument("--tracked-per-user", type=int, default=3, help="Tracked programs per contributor user")
+    p.add_argument("--tracked-per-user-reader", type=int, default=2, help="Tracked programs for reader user (if created)")
+
     p.add_argument("--do-purchases", action="store_true", help="Create a reader user and purchase access to some applicants")
     p.add_argument("--purchase-count", type=int, default=5)
 
@@ -640,6 +736,7 @@ def main() -> None:
         "users": [],
         "universities": [],
         "courses": [],
+        "tracked_programs": [],
         "applicants": [],
         "languages": [],
         "activities": [],
@@ -648,20 +745,19 @@ def main() -> None:
         "purchases": [],
     }
 
-    # 1) Create contributor users (each will create one applicant profile)
+    # 1) Create contributor users
     contributor_clients: List[ApplyApiClient] = []
-    for i in range(args.contributors):
+    for _ in range(args.contributors):
         phone = factory.phone_ir_like()
         dn = f"{factory.faker.first_name()} {factory.faker.last_name()}"
         u = seeder.create_user_via_otp(phone, display_name=dn)
         created["users"].append(u["user"])
         contributor_clients.append(api.with_token(u["token"]))
 
-    # 2) Try creating universities + courses (might be blocked in prod)
+    # 2) Try creating universities + courses
     known_universities: List[Dict[str, Any]] = []
     known_courses_by_uni: Dict[int, List[Dict[str, Any]]] = {}
 
-    # Use first contributor token to create catalog content (if allowed)
     catalog_client = contributor_clients[0] if contributor_clients else api
 
     for _ in range(args.universities):
@@ -680,28 +776,35 @@ def main() -> None:
             known_courses_by_uni[uni_id].append(c)
             created["courses"].append(c)
 
-    # 3) Each contributor creates applicant + related objects
+    # 3) Each contributor creates tracker + applicant + related objects
     for cclient in contributor_clients:
-        applicant = seeder.create_applicant(cclient)
-        created["applicants"].append(applicant)
-        applicant_id = int(applicant["id"])
-
-        # Choose a target university/course to make docs/applications consistent
         chosen_uni = random.choice(known_universities) if known_universities else None
         chosen_course = None
         if chosen_uni:
             courses = known_courses_by_uni.get(int(chosen_uni["id"]), [])
             chosen_course = random.choice(courses) if courses else None
 
-        # Languages
+        # --- Tracker programs (value-first entry point) ---
+        for _ in range(max(0, args.tracked_per_user)):
+            tp = seeder.add_tracked_program(
+                cclient,
+                known_university=chosen_uni,
+                known_course=chosen_course if (random.random() < 0.6) else None,  # mix catalog/custom
+            )
+            if tp:
+                created["tracked_programs"].append(tp)
+
+        # --- Applicant profile (contributor) ---
+        applicant = seeder.create_applicant(cclient)
+        created["applicants"].append(applicant)
+        applicant_id = int(applicant["id"])
+
         for _ in range(args.langs_per_applicant):
             created["languages"].append(seeder.add_language(cclient, applicant_id))
 
-        # Activities
         for _ in range(args.acts_per_applicant):
             created["activities"].append(seeder.add_activity(cclient, applicant_id))
 
-        # Applications first (so documents can reference program/university)
         applications_this_applicant: List[Dict[str, Any]] = []
         current_year = datetime.utcnow().year
         base_year = random.choice([current_year - 2, current_year - 1, current_year])
@@ -717,14 +820,9 @@ def main() -> None:
             applications_this_applicant.append(a)
             created["applications"].append(a)
 
-        # Documents (reference the same target uni/program to “make sense”)
-        used_uni_name = None
-        used_prog_name = None
-        if chosen_uni:
-            used_uni_name = chosen_uni.get("name")
-        if chosen_course:
-            used_prog_name = chosen_course.get("course_name")
-        elif applications_this_applicant:
+        used_uni_name = chosen_uni.get("name") if chosen_uni else None
+        used_prog_name = chosen_course.get("course_name") if chosen_course else None
+        if not used_prog_name and applications_this_applicant:
             used_prog_name = applications_this_applicant[0].get("program_name")
 
         for _ in range(args.docs_per_applicant):
@@ -737,11 +835,18 @@ def main() -> None:
                 )
             )
 
-    # 4) Purchases (optional): create a reader and buy access to some applicants
+    # 4) Purchases (optional) + reader tracker
     if args.do_purchases and created["applicants"]:
         reader_phone = factory.phone_ir_like()
         reader = seeder.create_user_via_otp(reader_phone, display_name="Reader User")
+        created["users"].append(reader["user"])
         reader_client = api.with_token(reader["token"])
+
+        # reader also has tracker programs
+        for _ in range(max(0, args.tracked_per_user_reader)):
+            tp = seeder.add_tracked_program(reader_client)
+            if tp:
+                created["tracked_programs"].append(tp)
 
         targets = [a["id"] for a in created["applicants"]]
         random.shuffle(targets)
@@ -750,7 +855,6 @@ def main() -> None:
             if p:
                 created["purchases"].append(p)
 
-    # Print a compact summary to stdout
     summary = {k: len(v) for k, v in created.items()}
     print(json.dumps(summary, indent=2))
 

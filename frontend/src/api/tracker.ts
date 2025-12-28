@@ -4,6 +4,7 @@ import type {
   TrackedProgramCreate,
   TrackedProgramUpdate,
   TrackerStats,
+  ChecklistItem,
 } from '../types';
 
 export const trackerApi = {
@@ -29,6 +30,6 @@ export const trackerApi = {
   deadlines: (days = 30) =>
     api.get<TrackedProgram[]>(`/tracker/deadlines?days=${days}`),
 
-  updateChecklist: (id: number, items: any[]) =>
+  updateChecklist: (id: number, items: ChecklistItem[]) =>
     api.post<TrackedProgram>(`/tracker/programs/${id}/checklist`, { items }),
 };

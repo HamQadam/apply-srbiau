@@ -148,15 +148,15 @@ export function DashboardPage() {
             </Card>
           ) : (
             <div className="space-y-4">
-              {items.map((p) => (
+              {items.map((p: TrackedProgram) => (
                 <ProgramCard
                   key={p.id}
                   program={p}
                   isUpdating={updateMutation.isPending || deleteMutation.isPending}
-                  onStatusChange={(id, next) =>
+                  onStatusChange={(id: number, next: TrackedProgramStatus) =>
                     updateMutation.mutate({ id, patch: { status: next } })
                   }
-                  onDelete={(id) => {
+                  onDelete={(id: number) => {
                     if (confirm('این برنامه از ترکرت حذف شود؟')) {
                       deleteMutation.mutate(id);
                     }
