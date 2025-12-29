@@ -14,6 +14,11 @@ import type {
   UserGoal,
   ApplicationStatus,
   Priority,
+  MatchingProfile,
+  MatchingOptions,
+  RecommendationsResponse,
+  ChecklistItem,
+  NoteEntry,
 } from '../types';
 
 // Auth
@@ -31,6 +36,42 @@ export const authApi = {
   setGoal: (goal: UserGoal) => api.post<User>('/auth/onboarding', { goal }),
   
   completeOnboarding: () => api.post<User>('/auth/onboarding/complete'),
+};
+
+// Matching
+export const matchingApi = {
+  getOptions: () => api.get<MatchingOptions>('/matching/options'),
+  
+  getProfile: () => api.get<{ profile: MatchingProfile; completed: boolean }>('/matching/profile'),
+  
+  saveProfile: (profile: MatchingProfile) =>
+    api.post<{
+      profile: MatchingProfile;
+      completed: boolean;
+      bonus_awarded: number;
+      new_balance: number;
+    }>('/matching/profile', profile),
+  
+  getRecommendations: (params?: { limit?: number; offset?: number; min_score?: number }) => {
+    const searchParams = new URLSearchParams();
+    if (params?.limit) searchParams.set('limit', String(params.limit));
+    if (params?.offset) searchParams.set('offset', String(params.offset));
+    if (params?.min_score) searchParams.set('min_score', String(params.min_score));
+    const query = searchParams.toString();
+    return api.get<RecommendationsResponse>(`/matching/recommendations${query ? `?${query}` : ''}`);
+  },
+  
+  getQuickRecommendations: (profile: Partial<MatchingProfile>) =>
+    api.post<{ recommendations: Array<{ id: number; program_name: string; university_name: string; country: string; match_score: number; match_reasons: string[] }>; message: string }>(
+      '/matching/quick-recommendations',
+      profile
+    ),
+  
+  trackRecommendation: (courseId: number, priority: Priority = 'target', intake?: string) =>
+    api.post<{ id: number; course_id: number; match_score: number; message: string }>(
+      `/matching/recommendations/${courseId}/track`,
+      { priority, intake }
+    ),
 };
 
 // Tracker
@@ -57,8 +98,40 @@ export const trackerApi = {
   
   getDeadlines: (days = 90) => api.get<DeadlineItem[]>(`/tracker/deadlines?days=${days}`),
   
-  updateChecklist: (id: number, checklist: Array<{ name: string; required: boolean; completed: boolean }>) =>
-    api.patch<{ ok: boolean }>(`/tracker/programs/${id}/checklist`, checklist),
+  // Checklist
+  updateChecklist: (id: number, checklist: ChecklistItem[]) =>
+    api.patch<{ ok: boolean; checklist: ChecklistItem[] }>(`/tracker/programs/${id}/checklist`, checklist),
+  
+  addChecklistItem: async (id: number, item: { name: string; required?: boolean; notes?: string }) => {
+    const result = await api.post<{ ok: boolean; item: ChecklistItem; checklist: ChecklistItem[] }>(`/tracker/programs/${id}/checklist/items`, item);
+    // Return a partial TrackedProgram with the updated checklist
+    return { id, document_checklist: result.checklist } as TrackedProgram;
+  },
+
+  deleteChecklistItem: async (id: number, itemId: string) => {
+    const result = await api.delete<{ ok: boolean; checklist: ChecklistItem[] }>(`/tracker/programs/${id}/checklist/items/${itemId}`);
+    // Return a partial TrackedProgram with the updated checklist
+    return { id, document_checklist: result.checklist } as TrackedProgram;
+  },
+  
+  // Notes
+  getNotes: (id: number) => api.get<{ main_notes: string | null; entries: NoteEntry[] }>(`/tracker/programs/${id}/notes`),
+  
+  updateMainNotes: (id: number, notes: string) =>
+    api.patch<{ ok: boolean; notes: string }>(`/tracker/programs/${id}/notes`, { notes }),
+  
+  addNoteEntry: async (id: number, entry: { content: string; category: string; pinned?: boolean }) => {
+    const result = await api.post<{ ok: boolean; entry: NoteEntry }>(`/tracker/programs/${id}/notes/entries`, entry);
+    return result.entry;
+  },
+  
+  updateNoteEntry: async (id: number, entryId: string, data: { content?: string; category?: string; pinned?: boolean }) => {
+    const result = await api.patch<{ ok: boolean; entries: NoteEntry[] }>(`/tracker/programs/${id}/notes/entries/${entryId}`, data);
+    return result.entries.find(e => e.id === entryId) as NoteEntry;
+  },
+  
+  deleteNoteEntry: (id: number, entryId: string) =>
+    api.delete<{ ok: boolean }>(`/tracker/programs/${id}/notes/entries/${entryId}`),
 };
 
 // Universities

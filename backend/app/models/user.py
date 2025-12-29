@@ -1,9 +1,9 @@
-"""User model with authentication, onboarding, and tracker integration."""
+"""User model with authentication, onboarding, matching profile, and tracker integration."""
 from datetime import datetime
 from typing import Optional, List, TYPE_CHECKING
 from enum import Enum
 from sqlmodel import SQLModel, Field, Relationship, Column
-from sqlalchemy import Enum as SAEnum
+from sqlalchemy import Enum as SAEnum, JSON
 
 if TYPE_CHECKING:
     from .tracked_program import TrackedProgram
@@ -23,6 +23,7 @@ class OnboardingStep(str, Enum):
     GOAL_SELECTED = "goal_selected"
     FIRST_PROGRAM_ADDED = "first_program_added"
     PROFILE_STARTED = "profile_started"
+    PROFILE_COMPLETED = "profile_completed"  # New step for matching profile
     COMPLETED = "completed"
 
 
@@ -44,6 +45,13 @@ class UserBase(SQLModel):
         sa_column=Column(SAEnum(OnboardingStep))
     )
     onboarding_completed: bool = Field(default=False)
+    
+    # Matching Profile - stored as JSON for flexibility
+    # Structure: {preferred_fields: [], preferred_countries: [], budget_min: int, budget_max: int,
+    #             preferred_degree_level: str, target_intake: str, language_preference: str,
+    #             gre_score: int, gmat_score: int, gpa: float, gpa_scale: str}
+    matching_profile: Optional[dict] = Field(default=None, sa_column=Column(JSON))
+    matching_profile_completed: bool = Field(default=False)
     
     # Ghadam balance
     ghadam_balance: int = Field(default=0)
@@ -109,3 +117,4 @@ class OTPCode(SQLModel, table=True):
 SIGNUP_BONUS_GHADAMS = 30  # Enough to view ~1 profile
 FIRST_PROGRAM_BONUS = 10
 COMPLETE_ONBOARDING_BONUS = 10
+PROFILE_COMPLETION_BONUS = 20  # Bonus for completing matching profile

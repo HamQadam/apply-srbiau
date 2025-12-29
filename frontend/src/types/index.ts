@@ -12,11 +12,70 @@ export interface User {
   onboarding_step: OnboardingStep;
   onboarding_completed: boolean;
   ghadam_balance: number;
+  matching_profile: MatchingProfile | null;
+  matching_profile_completed: boolean;
   created_at: string;
 }
 
 export type UserGoal = 'applying' | 'applied' | 'browsing';
-export type OnboardingStep = 'signed_up' | 'goal_selected' | 'first_program_added' | 'profile_started' | 'completed';
+export type OnboardingStep = 'signed_up' | 'goal_selected' | 'first_program_added' | 'profile_started' | 'profile_completed' | 'completed';
+
+// Matching Profile
+export interface MatchingProfile {
+  preferred_fields: string[];
+  preferred_countries: string[];
+  budget_min?: number;
+  budget_max?: number;
+  preferred_degree_level?: string;
+  target_intake?: string;
+  language_preference?: string;
+  gre_score?: number;
+  gmat_score?: number;
+  gpa?: number;
+  gpa_scale?: string;
+  prefer_scholarships?: boolean;
+}
+
+export interface MatchingOptions {
+  fields: string[];
+  countries: string[];
+  budget_ranges: Record<string, { min: number; max: number; label: string }>;
+  intake_options: { value: string; label: string }[];
+  degree_levels: string[];
+  teaching_languages: string[];
+}
+
+export interface Recommendation {
+  id: number;
+  program_name: string;
+  university_name: string | null;
+  country: string | null;
+  city: string | null;
+  degree_level: string | null;
+  field_of_study: string | null;
+  tuition_fee: number | null;
+  teaching_language: string | null;
+  duration_months: number | null;
+  application_deadline: string | null;
+  university_ranking_qs: number | null;
+  scholarship_available: boolean;
+  match_score: number;
+  match_reasons: string[];
+  warnings: string[];
+}
+
+export interface RecommendationsResponse {
+  recommendations: Recommendation[];
+  total: number;
+  limit: number;
+  offset: number;
+  profile_summary: {
+    fields: string[];
+    countries: string[];
+    degree_level: string | null;
+    budget_max: number | null;
+  };
+}
 
 export interface AuthResponse {
   token: string;
@@ -96,11 +155,13 @@ export interface TrackedProgram {
   shared_experience_id?: number | null;
   shared_at?: string | null;
   notes: string | null;
+  notes_entries: NoteEntry[] | null;
   document_checklist: ChecklistItem[] | null;
   application_portal_url: string | null;
   application_id: string | null;
   scholarship_offered: boolean;
   scholarship_amount: number | null;
+  match_score: number | null;
   created_at: string;
   updated_at: string;
   // Joined data
@@ -115,11 +176,32 @@ export interface TrackedProgram {
 }
 
 export interface ChecklistItem {
+  id: string;
   name: string;
   required: boolean;
   completed: boolean;
   notes?: string;
+  due_date?: string;
 }
+
+export type NoteCategory = 'important' | 'contact' | 'link' | 'reminder' | 'general';
+
+export interface NoteEntry {
+  id: string;
+  content: string;
+  category: NoteCategory;
+  pinned: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export const NOTE_CATEGORIES: Record<NoteCategory, { label: string; icon: string; color: string }> = {
+  important: { label: 'Important', icon: '⚡', color: 'bg-red-100 text-red-700 border-red-200' },
+  contact: { label: 'Contact', icon: '👤', color: 'bg-blue-100 text-blue-700 border-blue-200' },
+  link: { label: 'Link', icon: '🔗', color: 'bg-purple-100 text-purple-700 border-purple-200' },
+  reminder: { label: 'Reminder', icon: '⏰', color: 'bg-amber-100 text-amber-700 border-amber-200' },
+  general: { label: 'General', icon: '📝', color: 'bg-gray-100 text-gray-700 border-gray-200' },
+};
 
 export type ApplicationStatus = 
   | 'researching' 
@@ -210,16 +292,16 @@ export const STATUS_LABELS: Record<ApplicationStatus, string> = {
 };
 
 export const STATUS_COLORS: Record<ApplicationStatus, string> = {
-  researching: 'bg-gray-100 text-gray-700',
-  preparing: 'bg-blue-100 text-blue-700',
-  submitted: 'bg-purple-100 text-purple-700',
-  under_review: 'bg-yellow-100 text-yellow-700',
-  interview: 'bg-orange-100 text-orange-700',
-  waitlisted: 'bg-amber-100 text-amber-700',
-  accepted: 'bg-green-100 text-green-700',
-  rejected: 'bg-red-100 text-red-700',
-  withdrawn: 'bg-gray-200 text-gray-600',
-  deferred: 'bg-indigo-100 text-indigo-700',
+  researching: 'bg-slate-100 text-slate-700 border border-slate-200',
+  preparing: 'bg-blue-100 text-blue-700 border border-blue-200',
+  submitted: 'bg-violet-100 text-violet-700 border border-violet-200',
+  under_review: 'bg-amber-100 text-amber-700 border border-amber-200',
+  interview: 'bg-orange-100 text-orange-700 border border-orange-200',
+  waitlisted: 'bg-yellow-100 text-yellow-700 border border-yellow-200',
+  accepted: 'bg-emerald-100 text-emerald-700 border border-emerald-200',
+  rejected: 'bg-red-100 text-red-700 border border-red-200',
+  withdrawn: 'bg-gray-100 text-gray-500 border border-gray-200',
+  deferred: 'bg-indigo-100 text-indigo-700 border border-indigo-200',
 };
 
 export const PRIORITY_LABELS: Record<Priority, string> = {
@@ -229,7 +311,15 @@ export const PRIORITY_LABELS: Record<Priority, string> = {
 };
 
 export const PRIORITY_COLORS: Record<Priority, string> = {
-  dream: 'bg-purple-100 text-purple-700',
-  target: 'bg-blue-100 text-blue-700',
-  safety: 'bg-green-100 text-green-700',
+  dream: 'bg-gradient-to-r from-purple-500 to-pink-500 text-white',
+  target: 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white',
+  safety: 'bg-gradient-to-r from-green-500 to-emerald-500 text-white',
+};
+
+// Match score color helper
+export const getMatchScoreColor = (score: number): string => {
+  if (score >= 80) return 'text-emerald-600 bg-emerald-50';
+  if (score >= 60) return 'text-blue-600 bg-blue-50';
+  if (score >= 40) return 'text-amber-600 bg-amber-50';
+  return 'text-gray-600 bg-gray-50';
 };

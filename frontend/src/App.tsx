@@ -8,14 +8,18 @@ import { DashboardPage } from './pages/Dashboard/DashboardPage';
 import { AddProgramPage } from './pages/Dashboard/AddProgramPage';
 import { ProgramDetailPage } from './pages/Dashboard/ProgramDetailPage';
 import { ExplorePage } from './pages/Explore/ExplorePage';
+import { RecommendationsPage } from './pages/Recommendations/RecommendationsPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+        <div className="flex flex-col items-center gap-3">
+          <div className="animate-spin w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full"></div>
+          <span className="text-gray-500 text-sm">Loading...</span>
+        </div>
       </div>
     );
   }
@@ -44,7 +48,7 @@ function AppRoutes() {
         </ProtectedRoute>
       } />
       
-      {/* Protected routes */}
+      {/* Protected routes with Layout */}
       <Route path="/dashboard" element={<Layout />}>
         <Route index element={
           <ProtectedRoute>
@@ -59,6 +63,15 @@ function AppRoutes() {
         <Route path="programs/:id" element={
           <ProtectedRoute>
             <ProgramDetailPage />
+          </ProtectedRoute>
+        } />
+      </Route>
+      
+      {/* Recommendations route */}
+      <Route path="/recommendations" element={<Layout />}>
+        <Route index element={
+          <ProtectedRoute>
+            <RecommendationsPage />
           </ProtectedRoute>
         } />
       </Route>

@@ -316,9 +316,231 @@ def update_checklist(
     if not tp or tp.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Program not found")
     
+    # Ensure each item has an id
+    for i, item in enumerate(checklist):
+        if "id" not in item:
+            item["id"] = f"custom_{i}_{datetime.utcnow().timestamp()}"
+    
     tp.document_checklist = checklist
     tp.updated_at = datetime.utcnow()
     
     session.commit()
     
     return {"ok": True, "checklist": tp.document_checklist}
+
+
+@router.post("/programs/{program_id}/checklist/items")
+def add_checklist_item(
+    program_id: int,
+    item: dict,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Add a custom item to the document checklist."""
+    tp = session.get(TrackedProgram, program_id)
+    if not tp or tp.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Program not found")
+    
+    if not tp.document_checklist:
+        tp.document_checklist = []
+    
+    # Generate unique id for the item
+    item_id = f"custom_{datetime.utcnow().timestamp()}"
+    new_item = {
+        "id": item_id,
+        "name": item.get("name", "New Item"),
+        "required": item.get("required", False),
+        "completed": False,
+        "notes": item.get("notes")
+    }
+    
+    tp.document_checklist.append(new_item)
+    tp.updated_at = datetime.utcnow()
+    
+    session.commit()
+    
+    return {"ok": True, "item": new_item, "checklist": tp.document_checklist}
+
+
+@router.delete("/programs/{program_id}/checklist/items/{item_id}")
+def delete_checklist_item(
+    program_id: int,
+    item_id: str,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Remove a custom item from the document checklist."""
+    tp = session.get(TrackedProgram, program_id)
+    if not tp or tp.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Program not found")
+    
+    if not tp.document_checklist:
+        raise HTTPException(status_code=404, detail="Item not found")
+    
+    # Find and remove the item
+    original_length = len(tp.document_checklist)
+    tp.document_checklist = [item for item in tp.document_checklist if item.get("id") != item_id]
+    
+    if len(tp.document_checklist) == original_length:
+        raise HTTPException(status_code=404, detail="Item not found")
+    
+    tp.updated_at = datetime.utcnow()
+    session.commit()
+    
+    return {"ok": True, "checklist": tp.document_checklist}
+
+
+# ============ Enhanced Notes Endpoints ============
+
+@router.get("/programs/{program_id}/notes")
+def get_notes(
+    program_id: int,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Get all notes for a program (main notes + entries)."""
+    tp = session.get(TrackedProgram, program_id)
+    if not tp or tp.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Program not found")
+    
+    # Sort entries: pinned first, then by created_at desc
+    entries = tp.notes_entries or []
+    pinned = [e for e in entries if e.get("pinned")]
+    unpinned = [e for e in entries if not e.get("pinned")]
+    sorted_entries = pinned + unpinned
+    
+    return {
+        "main_notes": tp.notes,
+        "entries": sorted_entries
+    }
+
+
+@router.patch("/programs/{program_id}/notes")
+def update_main_notes(
+    program_id: int,
+    data: dict,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Update the main notes field (markdown supported)."""
+    tp = session.get(TrackedProgram, program_id)
+    if not tp or tp.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Program not found")
+    
+    notes_content = data.get("notes", "")
+    if len(notes_content) > 5000:
+        raise HTTPException(status_code=400, detail="Notes too long (max 5000 characters)")
+    
+    tp.notes = notes_content
+    tp.updated_at = datetime.utcnow()
+    
+    session.commit()
+    
+    return {"ok": True, "notes": tp.notes}
+
+
+@router.post("/programs/{program_id}/notes/entries")
+def add_note_entry(
+    program_id: int,
+    entry: dict,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Add a structured note entry with category."""
+    tp = session.get(TrackedProgram, program_id)
+    if not tp or tp.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Program not found")
+    
+    if not tp.notes_entries:
+        tp.notes_entries = []
+    
+    # Validate category
+    valid_categories = ["important", "contact", "link", "reminder", "general"]
+    category = entry.get("category", "general")
+    if category not in valid_categories:
+        category = "general"
+    
+    now = datetime.utcnow().isoformat()
+    new_entry = {
+        "id": f"note_{datetime.utcnow().timestamp()}",
+        "content": entry.get("content", ""),
+        "category": category,
+        "pinned": entry.get("pinned", False),
+        "created_at": now,
+        "updated_at": now
+    }
+    
+    tp.notes_entries.append(new_entry)
+    tp.updated_at = datetime.utcnow()
+    
+    session.commit()
+    
+    return {"ok": True, "entry": new_entry}
+
+
+@router.patch("/programs/{program_id}/notes/entries/{entry_id}")
+def update_note_entry(
+    program_id: int,
+    entry_id: str,
+    data: dict,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Update a note entry (content, category, pinned status)."""
+    tp = session.get(TrackedProgram, program_id)
+    if not tp or tp.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Program not found")
+    
+    if not tp.notes_entries:
+        raise HTTPException(status_code=404, detail="Entry not found")
+    
+    # Find and update the entry
+    entry_found = False
+    for entry in tp.notes_entries:
+        if entry.get("id") == entry_id:
+            entry_found = True
+            if "content" in data:
+                entry["content"] = data["content"]
+            if "category" in data:
+                valid_categories = ["important", "contact", "link", "reminder", "general"]
+                if data["category"] in valid_categories:
+                    entry["category"] = data["category"]
+            if "pinned" in data:
+                entry["pinned"] = bool(data["pinned"])
+            entry["updated_at"] = datetime.utcnow().isoformat()
+            break
+    
+    if not entry_found:
+        raise HTTPException(status_code=404, detail="Entry not found")
+    
+    tp.updated_at = datetime.utcnow()
+    session.commit()
+    
+    return {"ok": True, "entries": tp.notes_entries}
+
+
+@router.delete("/programs/{program_id}/notes/entries/{entry_id}")
+def delete_note_entry(
+    program_id: int,
+    entry_id: str,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Delete a note entry."""
+    tp = session.get(TrackedProgram, program_id)
+    if not tp or tp.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Program not found")
+    
+    if not tp.notes_entries:
+        raise HTTPException(status_code=404, detail="Entry not found")
+    
+    original_length = len(tp.notes_entries)
+    tp.notes_entries = [e for e in tp.notes_entries if e.get("id") != entry_id]
+    
+    if len(tp.notes_entries) == original_length:
+        raise HTTPException(status_code=404, detail="Entry not found")
+    
+    tp.updated_at = datetime.utcnow()
+    session.commit()
+    
+    return {"ok": True}

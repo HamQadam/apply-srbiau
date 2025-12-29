@@ -75,8 +75,12 @@ class TrackedProgramBase(SQLModel):
     result_date: Optional[date] = Field(default=None)
     interview_date: Optional[date] = Field(default=None)
     
-    # User notes (private)
-    notes: Optional[str] = Field(default=None, max_length=2000)
+    # User notes (private) - enhanced with markdown support
+    notes: Optional[str] = Field(default=None, max_length=5000)
+    
+    # Structured notes - stored as JSON array
+    # Structure: [{id: str, content: str, category: str, pinned: bool, created_at: str, updated_at: str}]
+    notes_entries: Optional[List[dict]] = Field(default=None, sa_column=Column(JSON))
     
     # Document checklist stored as JSON
     document_checklist: Optional[List[dict]] = Field(default=None, sa_column=Column(JSON))
@@ -92,6 +96,9 @@ class TrackedProgramBase(SQLModel):
     
     # Did user share this journey?
     shared_as_experience: bool = Field(default=False)
+    
+    # Match score from recommendations (0-100)
+    match_score: Optional[int] = Field(default=None)
 
 
 class TrackedProgram(TrackedProgramBase, table=True):
@@ -136,12 +143,14 @@ class TrackedProgramUpdate(SQLModel):
     result_date: Optional[date] = None
     interview_date: Optional[date] = None
     notes: Optional[str] = None
+    notes_entries: Optional[List[dict]] = None
     document_checklist: Optional[List[dict]] = None
     application_portal_url: Optional[str] = None
     application_id: Optional[str] = None
     scholarship_offered: Optional[bool] = None
     scholarship_amount: Optional[int] = None
     scholarship_notes: Optional[str] = None
+    match_score: Optional[int] = None
 
 
 class TrackedProgramRead(TrackedProgramBase):
@@ -160,6 +169,9 @@ class TrackedProgramRead(TrackedProgramBase):
     university_ranking_qs: Optional[int] = None
     degree_level: Optional[str] = None
     program_deadline: Optional[date] = None  # From course, if linked
+    
+    # Match score
+    match_score: Optional[int] = None
 
 
 class TrackerStats(SQLModel):
@@ -173,16 +185,16 @@ class TrackerStats(SQLModel):
     upcoming_deadlines: int = 0  # In next 30 days
 
 
-# Default document checklist for common applications
+# Simplified document checklist for common applications
 DEFAULT_CHECKLIST = [
-    {"name": "Transcript", "required": True, "completed": False},
-    {"name": "Degree Certificate", "required": True, "completed": False},
-    {"name": "CV/Resume", "required": True, "completed": False},
-    {"name": "Motivation Letter", "required": True, "completed": False},
-    {"name": "Language Certificate", "required": True, "completed": False},
-    {"name": "Recommendation Letter 1", "required": True, "completed": False},
-    {"name": "Recommendation Letter 2", "required": False, "completed": False},
-    {"name": "Passport Copy", "required": True, "completed": False},
-    {"name": "Photo", "required": False, "completed": False},
-    {"name": "Application Fee", "required": False, "completed": False},
+    {"id": "motivation", "name": "Motivation Letter", "required": True, "completed": False},
+    {"id": "cv", "name": "CV/Resume", "required": True, "completed": False},
+    {"id": "transcript", "name": "Academic Transcripts", "required": True, "completed": False},
+    {"id": "rec1", "name": "Recommendation Letter 1", "required": True, "completed": False},
+    {"id": "rec2", "name": "Recommendation Letter 2", "required": False, "completed": False},
+    {"id": "language", "name": "Language Certificate", "required": True, "completed": False},
 ]
+
+
+# Note entry categories
+NOTE_CATEGORIES = ["important", "contact", "link", "reminder", "general"]
