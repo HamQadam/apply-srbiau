@@ -1,14 +1,16 @@
 from __future__ import annotations
 
+import asyncio
 import asyncpg
 from typing import Any
 from datetime import datetime, timezone
 import re
+import time
 
 from .dedupe import best_fuzzy_match
 
 def _now_utc() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.utcnow()
 
 def _norm(s: str) -> str:
     s = (s or "").strip().lower()
@@ -22,6 +24,7 @@ class PgStore:
         self.pool_max = pool_max
         self.pool: asyncpg.Pool | None = None
         self.cols: dict[str, set[str]] = {}
+        self.maxlen: dict[str, dict[str, int | None]] = {}  # table -> col -> maxlen
 
     async def aopen(self) -> None:
         self.pool = await asyncpg.create_pool(self.dsn, min_size=1, max_size=self.pool_max)
@@ -31,26 +34,56 @@ class PgStore:
         if self.pool:
             await self.pool.close()
             self.pool = None
+    async def open(self) -> None:
+        await self.aopen()
+
+    async def close(self) -> None:
+        await self.aclose()
 
     async def _load_columns(self) -> None:
         assert self.pool
         async with self.pool.acquire() as conn:
             rows = await conn.fetch(
                 """
-                SELECT table_name, column_name
+                SELECT table_name, column_name, character_maximum_length
                 FROM information_schema.columns
                 WHERE table_schema = $1 AND table_name IN ('universities', 'courses')
                 """,
                 self.schema,
             )
         cols: dict[str, set[str]] = {}
+        maxlen: dict[str, dict[str, int | None]] = {}
         for r in rows:
             cols.setdefault(r["table_name"], set()).add(r["column_name"])
+            maxlen.setdefault(r["table_name"], {})[r["column_name"]] = r["character_maximum_length"]
         self.cols = cols
+        self.maxlen = maxlen
 
     def _filter(self, table: str, payload: dict[str, Any]) -> dict[str, Any]:
         allowed = self.cols.get(table, set())
         return {k: v for k, v in payload.items() if k in allowed}
+
+    def _truncate(self, table: str, payload: dict[str, Any]) -> dict[str, Any]:
+        """
+        Truncate strings to match varchar(n) limits to avoid
+        StringDataRightTruncationError.
+        """
+        limits = self.maxlen.get(table, {})
+        out: dict[str, Any] = {}
+        for k, v in payload.items():
+            if isinstance(v, str):
+                ml = limits.get(k)
+                if ml is not None and ml > 0 and len(v) > ml:
+                    # Keep it readable; avoid breaking inserts.
+                    if ml <= 3:
+                        out[k] = v[:ml]
+                    else:
+                        out[k] = v[: ml - 3] + "..."
+                else:
+                    out[k] = v
+            else:
+                out[k] = v
+        return out
 
     def _add_timestamps(self, table: str, payload: dict[str, Any], *, for_update: bool) -> dict[str, Any]:
         allowed = self.cols.get(table, set())
@@ -67,6 +100,7 @@ class PgStore:
     async def _insert_returning_id(self, conn: asyncpg.Connection, table: str, payload: dict[str, Any]) -> int:
         payload = self._filter(table, payload)
         payload = self._add_timestamps(table, payload, for_update=False)
+        payload = self._truncate(table, payload)
 
         keys = list(payload.keys())
         vals = [payload[k] for k in keys]
@@ -82,6 +116,7 @@ class PgStore:
     async def _update_by_id(self, conn: asyncpg.Connection, table: str, row_id: int, patch: dict[str, Any]) -> None:
         patch = self._filter(table, patch)
         patch = self._add_timestamps(table, patch, for_update=True)
+        patch = self._truncate(table, patch)
         if not patch:
             return
 
@@ -161,7 +196,7 @@ class PgStore:
     async def upsert_course(self, payload: dict[str, Any], *, min_score: int = 92) -> int:
         assert self.pool
         name = payload.get("name") or "Unknown"
-        degree_level = payload.get("degree_level") or "master"
+        degree_level = payload.get("degree_level") or "MASTER"
         university_id = int(payload.get("university_id") or 0)
 
         daad_id = None
@@ -204,7 +239,7 @@ class PgStore:
                     # keep it simple: reuse per-item upsert logic
                     # (still in same txn)
                     name = p.get("name") or "Unknown"
-                    degree_level = p.get("degree_level") or "master"
+                    degree_level = p.get("degree_level") or "MASTER"
                     university_id = int(p.get("university_id") or 0)
 
                     daad_id = None
@@ -234,3 +269,41 @@ class PgStore:
                         continue
 
                     await self._insert_returning_id(conn, "courses", p)
+    
+    async def wait_until_ready(self, timeout_s: int = 120) -> None:
+        """
+        Wait until backend has created the tables (migrations/startup).
+        Also logs which DB we are connected to.
+        """
+        assert self.pool, "Call aopen() before wait_until_ready()"
+        deadline = time.monotonic() + timeout_s
+        uni_tbl = f"{self.schema}.universities"
+        course_tbl = f"{self.schema}.courses"
+
+        while True:
+            async with self.pool.acquire() as conn:
+                dbname = await conn.fetchval("select current_database()")
+                # to_regclass returns NULL if not present
+                uni_ok = await conn.fetchval("select to_regclass($1)", uni_tbl)
+                course_ok = await conn.fetchval("select to_regclass($1)", course_tbl)
+
+                if uni_ok and course_ok:
+                    # good to go
+                    await self._load_columns()
+                    return
+
+                # Helpful debug so you can SEE if you're on the wrong DB
+                # (dbname will expose that instantly)
+                # NOTE: don't spam logs too hard
+                print(f"[db] waiting for tables in db={dbname} ... missing: "
+                      f"{'universities ' if not uni_ok else ''}"
+                      f"{'courses' if not course_ok else ''}")
+
+            if time.monotonic() > deadline:
+                raise RuntimeError(
+                    f"DB not ready after {timeout_s}s. Missing tables: "
+                    f"{'universities ' if not uni_ok else ''}"
+                    f"{'courses' if not course_ok else ''}"
+                )
+
+            await asyncio.sleep(2)

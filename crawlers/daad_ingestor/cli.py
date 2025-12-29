@@ -29,7 +29,8 @@ def build_course_payload(item: dict[str, Any], degree_level: str, university_id:
     source_note = f"source=daad; daad_course_id={item.get('id')}"
     return {
         "name": item.get("courseName") or "Unknown",
-        "degree_level": degree_level,
+        #"degree_level": degree_level,
+        "degree_level": (degree_level or "").upper() or None,
         "field": item.get("subject") or "Unknown",
         "teaching_language": map_teaching_language(item.get("languages")),
         "duration_months": parse_duration_months(item.get("programmeDuration")),
@@ -59,8 +60,10 @@ def build_course_payload(item: dict[str, Any], degree_level: str, university_id:
 async def ingest(cfg: Settings):
     state = StateStore(cfg.checkpoint_path)
     daad = DaadClient(cfg.daad_base_url, cfg.daad_lang, cfg.daad_rps, timeout_s=30.0)
-    db = PgStore(cfg.database_url, schema=cfg.db_schema, pool_max=cfg.db_pool_max)
-
+    #db = PgStore(cfg.database_url, schema=cfg.db_schema, pool_max=cfg.db_pool_max)
+    db = PgStore(cfg.effective_database_url(), schema=cfg.db_schema, pool_max=cfg.db_pool_max)
+    await db.aopen()
+    await db.wait_until_ready(timeout_s=cfg.db_wait_timeout_s)
     buffer: list[dict[str, Any]] = []
 
     degree_map = {
@@ -69,7 +72,6 @@ async def ingest(cfg: Settings):
         "phd": cfg.daad_degree_phd,
     }
 
-    await db.aopen()
     try:
         for degree_level, degree_code in degree_map.items():
             offset = state.get_offset(degree_level)

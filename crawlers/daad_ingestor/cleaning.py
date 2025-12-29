@@ -18,17 +18,17 @@ def map_teaching_language(langs: list[str] | None) -> str:
     langs = langs or []
     norm = {l.strip().lower() for l in langs}
     if norm == {"english"}:
-        return "english"
+        return "ENGLISH"
     if norm == {"german"}:
-        return "german"
+        return "GERMAN"
     if "english" in norm and "german" not in norm and len(norm) == 1:
-        return "english"
+        return "ENGLISH"
     if "english" in norm and len(norm) >= 2:
         # your schema is single-valued; pick english for search usefulness
-        return "english"
+        return "ENGLISH"
     if "german" in norm and len(norm) >= 2:
-        return "german"
-    return "other"
+        return "GERMAN"
+    return "OTHER"
 
 def parse_duration_months(programme_duration: str | None) -> int | None:
     if not programme_duration:

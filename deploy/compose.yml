@@ -19,6 +19,11 @@ services:
     restart: unless-stopped
     expose:
       - "8888"   # internal only
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8888/health').read()"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
 
   frontend:
     build:
@@ -35,13 +40,18 @@ services:
     env_file:
       - ../backend/.env
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@database:5432/${POSTGRES_DB}
+      POSTGRES_HOST: database
+      POSTGRES_PORT: 5432
+      DB_SCHEMA: public
       CHECKPOINT_PATH: /state/daad_checkpoint.json
       BATCH_SIZE: "50"
       DAAD_PAGE_SIZE: "100"
       DB_POOL_MAX: "10"
+      DB_WAIT_TIMEOUT_S: "180"
     depends_on:
       database:
+        condition: service_healthy
+      api:
         condition: service_healthy
     volumes:
       - daad_state:/state
