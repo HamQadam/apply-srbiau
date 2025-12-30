@@ -33,30 +33,56 @@ services:
     expose:
       - "80"     # internal only
 
-  daad-ingestor:
-    build:
-      context: ../crawlers
-    container_name: daad-ingestor
-    env_file:
-      - ./.env
+
+  # ─────────────────────────────────────────────────────────────
+  # DAAD Crawler (Germany)
+  # ─────────────────────────────────────────────────────────────
+  daad-crawler:
+    build: ./crawlers
+    command: ["daad"]
+    profiles: ["crawlers", "all-crawlers"]
     environment:
+      POSTGRES_USER: ${POSTGRES_USER:-apply_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-apply_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-apply_db}
       POSTGRES_HOST: database
       POSTGRES_PORT: 5432
-      DB_SCHEMA: public
-      CHECKPOINT_PATH: /state/daad_checkpoint.json
-      BATCH_SIZE: "50"
-      DAAD_PAGE_SIZE: "100"
-      DB_POOL_MAX: "10"
-      DB_WAIT_TIMEOUT_S: "180"
+      BATCH_SIZE: 50
+      DAAD_RPS: 2.0
+      DB_WAIT_TIMEOUT_S: 180
+    volumes:
+      - crawler-state:/state
     depends_on:
+      backend:
+        condition: service_healthy
       database:
         condition: service_healthy
-      api:
-        condition: service_healthy
-    volumes:
-      - daad_state:/state
     restart: "no"
-    command: ["python", "-m", "daad_ingestor.cli", "ingest"]
+
+  # ─────────────────────────────────────────────────────────────
+  # StudyInNL Crawler (Netherlands)
+  # ─────────────────────────────────────────────────────────────
+  studyinnl-crawler:
+    build: ./crawlers
+    command: ["studyinnl"]
+    profiles: ["crawlers", "all-crawlers"]
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-apply_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-apply_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-apply_db}
+      POSTGRES_HOST: database
+      POSTGRES_PORT: 5432
+      BATCH_SIZE: 50
+      STUDYINNL_RPS: 2.0
+      DB_WAIT_TIMEOUT_S: 180
+    volumes:
+      - crawler-state:/state
+    depends_on:
+      backend:
+        condition: service_healthy
+      database:
+        condition: service_healthy
+    restart: "no"
 
   database:
     image: postgres:16

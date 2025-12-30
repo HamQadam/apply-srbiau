@@ -1,20 +1,24 @@
-FROM ghcr.io/astral-sh/uv:python3.12-bookworm AS builder
-WORKDIR /app
-
-# copy BOTH so dependency resolution/cache is correct
-COPY pyproject.toml uv.lock ./
-
-RUN uv sync --frozen --no-dev
-
-COPY daad_ingestor ./daad_ingestor
-
 FROM python:3.12-slim
+
 WORKDIR /app
 
-COPY --from=builder /app/.venv /app/.venv
-COPY --from=builder /app/daad_ingestor /app/daad_ingestor
+# Install uv for fast package management
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
-ENV PATH="/app/.venv/bin:$PATH"
-ENV PYTHONUNBUFFERED=1
+# Copy project files
+COPY pyproject.toml .
+COPY README.md .
+COPY cli.py .
+COPY base/ base/
+COPY daad_ingestor/ daad_ingestor/
+COPY studyinnl_ingestor/ studyinnl_ingestor/
 
-CMD ["python", "-m", "daad_ingestor.cli", "ingest"]
+# Install dependencies
+RUN uv pip install --system -e .
+
+# Create state directory
+RUN mkdir -p /state
+
+# Default command - show help
+ENTRYPOINT ["crawl"]
+CMD ["sources"]

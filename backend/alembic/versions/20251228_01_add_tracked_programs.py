@@ -1,7 +1,7 @@
 """add tracked_programs table
 
 Revision ID: 20251228_01
-Revises: 
+Revises: 20251227_00
 Create Date: 2025-12-28
 """
 
@@ -10,9 +10,8 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 
-# revision identifiers, used by Alembic.
 revision = "20251228_01"
-down_revision = None
+down_revision = "20251227_00"  # Now depends on initial schema
 branch_labels = None
 depends_on = None
 
