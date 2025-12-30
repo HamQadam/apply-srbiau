@@ -84,6 +84,14 @@ def decode_token(token: str) -> Optional[int]:
         return None
 
 
+# Alias for deps.py compatibility
+verify_token = decode_token
+
+
+# Alias for backward compatibility
+verify_token = decode_token
+
+
 async def get_current_user(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
     session: Session = Depends(get_session),

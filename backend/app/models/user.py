@@ -59,6 +59,7 @@ class UserBase(SQLModel):
     # Settings
     email_notifications: bool = Field(default=True)
     deadline_reminders: bool = Field(default=True)
+    is_active: bool = Field(default=True)  # Account status
 
 
 class User(UserBase, table=True):

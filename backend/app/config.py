@@ -8,11 +8,14 @@ class Settings(BaseSettings):
     postgres_user: str = "postgres"
     postgres_password: str = "postgres"
     postgres_db: str = "apply_db"
-    postgres_host: str = "database"
+    postgres_host: str = "localhost"
     postgres_port: int = 5432
+    use_sqlite: bool = True  # Use SQLite for local development
     
     @property
     def database_url(self) -> str:
+        if self.use_sqlite:
+            return "sqlite:///./ghadam.db"
         return f"postgresql://{self.postgres_user}:{self.postgres_password}@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
     
     # JWT
@@ -29,7 +32,7 @@ class Settings(BaseSettings):
     cors_origins: list[str] = ["http://localhost:5173", "http://localhost:3000"]
     
     # File storage
-    upload_dir: str = "/app/uploads"
+    upload_dir: str = "./uploads"
     max_file_size_mb: int = 10
     
     class Config:
