@@ -1,7 +1,7 @@
 """Add matching profile fields to users and tracked programs
 
 Revision ID: 20251229_01
-Revises: 20251228_01_add_tracked_programs
+Revises: 20251228_01
 Create Date: 2025-12-29 12:00:00.000000
 
 """
@@ -9,9 +9,8 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
-# revision identifiers, used by Alembic.
 revision = '20251229_01'
-down_revision = '20251228_01_add_tracked_programs'
+down_revision = '20251228_01'
 branch_labels = None
 depends_on = None
 
@@ -28,7 +27,7 @@ def upgrade():
     # Update notes column max length
     op.alter_column('tracked_programs', 'notes',
                     type_=sa.String(5000),
-                    existing_type=sa.String(2000),
+                    existing_type=sa.String(4000),
                     existing_nullable=True)
 
 
@@ -43,6 +42,6 @@ def downgrade():
     
     # Revert notes column max length
     op.alter_column('tracked_programs', 'notes',
-                    type_=sa.String(2000),
+                    type_=sa.String(4000),
                     existing_type=sa.String(5000),
                     existing_nullable=True)

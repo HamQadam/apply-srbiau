@@ -1,134 +1,274 @@
+#!/usr/bin/env python3
+"""
+DAAD Crawler CLI
+
+Command-line interface for running the DAAD crawler with various options.
+
+Usage:
+    daad-ingest ingest [options]
+    daad-ingest analyze-failures [options]
+    
+Examples:
+    # Full crawl
+    daad-ingest ingest
+    
+    # Dry run (no DB writes)
+    daad-ingest ingest --dry-run
+    
+    # Resume from checkpoint
+    daad-ingest ingest --resume
+    
+    # Analyze failed items
+    daad-ingest analyze-failures --file /state/failed_items.jsonl
+"""
 from __future__ import annotations
 
 import argparse
 import asyncio
+import json
 import logging
+import sys
+from collections import Counter
+from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 from .config import Settings
-from .clients.daad import DaadClient
-from .cleaning import map_teaching_language, parse_duration_months, parse_tuition, extract_deadlines
-from .state import StateStore
+from .daad_crawler import DaadCrawler
 from .db import PgStore
+from .state import StateStore
+from ..base import IngestionEngine, IngestionConfig
 
-log = logging.getLogger("daad-ingestor")
 
-def build_university_payload(item: dict[str, Any]) -> dict[str, Any]:
-    return {
-        "name": item.get("academy") or "Unknown",
-        "country": "Germany",
-        "city": item.get("city") or "Unknown",
-        "website": None,
-        "logo_url": None,
-    }
+def setup_logging(verbose: bool = False, log_file: str | None = None) -> None:
+    """Configure logging with structured output."""
+    level = logging.DEBUG if verbose else logging.INFO
+    
+    # Format with timestamp and level
+    fmt = "%(asctime)s | %(levelname)-8s | %(name)-20s | %(message)s"
+    datefmt = "%Y-%m-%d %H:%M:%S"
+    
+    handlers: list[logging.Handler] = [
+        logging.StreamHandler(sys.stdout)
+    ]
+    
+    if log_file:
+        handlers.append(logging.FileHandler(log_file))
+    
+    logging.basicConfig(
+        level=level,
+        format=fmt,
+        datefmt=datefmt,
+        handlers=handlers,
+    )
+    
+    # Reduce noise from httpx
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)
 
-def build_course_payload(item: dict[str, Any], degree_level: str, university_id: int) -> dict[str, Any]:
-    is_free, fee_amount = parse_tuition(item.get("tuitionFees"))
-    d_fall, d_spring, d_notes = extract_deadlines(item.get("applicationDeadline"))
 
-    source_note = f"source=daad; daad_course_id={item.get('id')}"
-    return {
-        "name": item.get("courseName") or "Unknown",
-        #"degree_level": degree_level,
-        "degree_level": (degree_level or "").upper() or None,
-        "field": item.get("subject") or "Unknown",
-        "teaching_language": map_teaching_language(item.get("languages")),
-        "duration_months": parse_duration_months(item.get("programmeDuration")),
-        "credits_ects": None,
-        "tuition_fee_amount": fee_amount,
-        "tuition_fee_currency": "EUR" if fee_amount is not None else None,
-        "tuition_fee_per": "year",
-        "is_tuition_free": is_free,
-        "deadline_fall": d_fall,
-        "deadline_spring": d_spring,
-        "deadline_notes": d_notes,
-        "program_url": f"https://www2.daad.de{item.get('link')}" if item.get("link") else None,
-        "application_url": None,
-        "description": None,
-        "notes": source_note,
-        "university_id": university_id,
-
-        # very common NOT NULL / defaults in your API model
-        "gpa_scale": "4.0",
-        "gre_required": False,
-        "gmat_required": False,
-        "scholarships_available": False,
-        "verified_by_count": 0,
-        "view_count": 0,
-    }
-
-async def ingest(cfg: Settings):
+async def run_ingest(args: argparse.Namespace, cfg: Settings) -> int:
+    """Run the ingestion process."""
+    log = logging.getLogger("cli.ingest")
+    
+    # Load state for resumption
     state = StateStore(cfg.checkpoint_path)
-    daad = DaadClient(cfg.daad_base_url, cfg.daad_lang, cfg.daad_rps, timeout_s=30.0)
-    #db = PgStore(cfg.database_url, schema=cfg.db_schema, pool_max=cfg.db_pool_max)
-    db = PgStore(cfg.effective_database_url(), schema=cfg.db_schema, pool_max=cfg.db_pool_max)
-    await db.aopen()
-    await db.wait_until_ready(timeout_s=cfg.db_wait_timeout_s)
-    buffer: list[dict[str, Any]] = []
-
-    degree_map = {
-        "bachelor": cfg.daad_degree_bachelor,
-        "master": cfg.daad_degree_master,
-        "phd": cfg.daad_degree_phd,
-    }
-
+    start_offsets = {}
+    
+    if args.resume:
+        for degree in ["bachelor", "master", "phd"]:
+            offset = state.get_offset(degree)
+            if offset > 0:
+                start_offsets[degree] = offset
+                log.info("Resuming %s from offset %d", degree, offset)
+    
+    # Create crawler
+    crawler = DaadCrawler(
+        base_url=cfg.daad_base_url,
+        lang=cfg.daad_lang,
+        rps=cfg.daad_rps,
+        page_size=cfg.daad_page_size,
+        start_offsets=start_offsets,
+    )
+    
+    # Create database store
+    db = PgStore(
+        dsn=cfg.effective_database_url(),
+        schema=cfg.db_schema,
+        pool_max=cfg.db_pool_max,
+    )
+    
+    # Create ingestion engine
+    ingestion_config = IngestionConfig(
+        batch_size=cfg.batch_size,
+        dry_run=args.dry_run,
+        save_failed_items=True,
+        failed_items_path=cfg.failed_items_path,
+        db_wait_timeout_s=cfg.db_wait_timeout_s,
+    )
+    engine = IngestionEngine(db, ingestion_config)
+    
     try:
-        for degree_level, degree_code in degree_map.items():
-            offset = state.get_offset(degree_level)
-            log.info("Degree=%s (code=%s) starting offset=%s", degree_level, degree_code, offset)
-
-            while True:
-                page = await daad.search(degree_code=degree_code, limit=cfg.daad_page_size, offset=offset)
-                courses = page.get("courses") or []
-                if not courses:
-                    log.info("Degree=%s done.", degree_level)
-                    break
-
-                for item in courses:
-                    uni_payload = build_university_payload(item)
-                    if cfg.dry_run:
-                        uni_id = 0
-                        log.info("[DRY] university: %s", uni_payload)
-                    else:
-                        uni_id = await db.upsert_university(uni_payload)
-
-                    course_payload = build_course_payload(item, degree_level, uni_id)
-                    buffer.append(course_payload)
-
-                    if len(buffer) >= cfg.batch_size:
-                        await flush_buffer(cfg, db, buffer)
-                        buffer.clear()
-
-                offset += cfg.daad_page_size
-                state.set_offset(degree_level, offset)
-                log.info("Checkpoint: %s offset=%s", degree_level, offset)
-
-        if buffer:
-            await flush_buffer(cfg, db, buffer)
-
+        await db.aopen()
+        
+        # Run ingestion
+        crawl_stats, ingest_stats = await engine.run(crawler)
+        
+        # Save final state
+        if not args.dry_run and crawl_stats:
+            # Note: In production, you'd track offsets more granularly
+            log.info("Crawl completed successfully")
+        
+        # Return non-zero if there were failures
+        if crawl_stats and crawl_stats.total_failed > 0:
+            return 1
+        return 0
+        
     finally:
-        await daad.aclose()
         await db.aclose()
 
-async def flush_buffer(cfg: Settings, db: PgStore, buffer: list[dict[str, Any]]):
-    log.info("Flushing batch=%s", len(buffer))
-    if cfg.dry_run:
-        for c in buffer:
-            log.info("[DRY] course: %s", {k: c.get(k) for k in ("name", "degree_level", "university_id")})
-        return
 
-    # batch of 50 inside a single transaction
-    await db.upsert_courses_batch(buffer)
+async def run_analyze(args: argparse.Namespace) -> int:
+    """Analyze failed items from a previous run."""
+    log = logging.getLogger("cli.analyze")
+    
+    failed_file = Path(args.file)
+    if not failed_file.exists():
+        log.error("Failed items file not found: %s", failed_file)
+        return 1
+    
+    # Load and analyze failures
+    errors: list[dict[str, Any]] = []
+    with open(failed_file) as f:
+        for line in f:
+            if line.strip():
+                errors.append(json.loads(line))
+    
+    if not errors:
+        log.info("No failures found in %s", failed_file)
+        return 0
+    
+    log.info("Analyzing %d failures from %s", len(errors), failed_file)
+    
+    # Group by error type
+    by_type: Counter[str] = Counter()
+    by_source: Counter[str] = Counter()
+    
+    for err in errors:
+        err_info = err.get("error") or {}
+        by_type[err_info.get("error_type", "UNKNOWN")] += 1
+        by_source[err.get("source", "unknown")] += 1
+    
+    print("\n" + "=" * 60)
+    print("FAILURE ANALYSIS REPORT")
+    print("=" * 60)
+    print(f"\nTotal failures: {len(errors)}")
+    
+    print("\nBy Error Type:")
+    for err_type, count in by_type.most_common():
+        print(f"  {err_type}: {count}")
+    
+    print("\nBy Source:")
+    for source, count in by_source.most_common():
+        print(f"  {source}: {count}")
+    
+    # Show examples
+    if args.examples > 0:
+        print(f"\nSample failures (first {args.examples}):")
+        for i, err in enumerate(errors[:args.examples]):
+            print(f"\n  [{i+1}] Source ID: {err.get('source_id', 'unknown')}")
+            err_info = err.get("error") or {}
+            print(f"      Type: {err_info.get('error_type', 'UNKNOWN')}")
+            print(f"      Message: {err_info.get('message', 'No message')[:100]}")
+    
+    print("\n" + "=" * 60)
+    
+    # Export detailed report if requested
+    if args.output:
+        report = {
+            "generated_at": datetime.utcnow().isoformat(),
+            "total_failures": len(errors),
+            "by_error_type": dict(by_type),
+            "by_source": dict(by_source),
+            "errors": errors,
+        }
+        with open(args.output, "w") as f:
+            json.dump(report, f, indent=2)
+        log.info("Detailed report written to: %s", args.output)
+    
+    return 0
 
-def main():
-    parser = argparse.ArgumentParser(prog="daad-ingest")
-    parser.add_argument("cmd", choices=["ingest"])
-    parser.add_argument("--dry-run", action="store_true")
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        prog="daad-ingest",
+        description="DAAD Crawler - Fetch and ingest German study programs",
+    )
+    parser.add_argument(
+        "-v", "--verbose",
+        action="store_true",
+        help="Enable verbose (debug) logging",
+    )
+    parser.add_argument(
+        "--log-file",
+        type=str,
+        help="Write logs to file",
+    )
+    
+    subparsers = parser.add_subparsers(dest="command", required=True)
+    
+    # Ingest command
+    ingest_parser = subparsers.add_parser(
+        "ingest",
+        help="Run the DAAD crawler and ingest to database",
+    )
+    ingest_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Don't write to database, just log what would happen",
+    )
+    ingest_parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="Resume from last checkpoint",
+    )
+    
+    # Analyze command
+    analyze_parser = subparsers.add_parser(
+        "analyze-failures",
+        help="Analyze failed items from a previous run",
+    )
+    analyze_parser.add_argument(
+        "--file",
+        type=str,
+        default="/state/failed_items.jsonl",
+        help="Path to failed items file",
+    )
+    analyze_parser.add_argument(
+        "--examples",
+        type=int,
+        default=5,
+        help="Number of example failures to show",
+    )
+    analyze_parser.add_argument(
+        "--output",
+        type=str,
+        help="Write detailed JSON report to file",
+    )
+    
     args = parser.parse_args()
+    setup_logging(verbose=args.verbose, log_file=args.log_file)
+    
+    cfg = Settings()
+    
+    if args.command == "ingest":
+        return asyncio.run(run_ingest(args, cfg))
+    elif args.command == "analyze-failures":
+        return asyncio.run(run_analyze(args))
+    else:
+        parser.print_help()
+        return 1
 
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-    cfg = Settings(dry_run=args.dry_run)
-    asyncio.run(ingest(cfg))
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
