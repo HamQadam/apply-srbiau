@@ -9,3 +9,5 @@ log:
 
 psql:
 	docker exec -it apply-db psql -U apply_user apply_db
+run:
+	cd deploy; docker compose up -d

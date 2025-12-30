@@ -10,7 +10,7 @@ services:
       POSTGRES_HOST: database
       POSTGRES_PORT: 5432
     env_file:
-      - ../backend/.env
+      - ./.env
     volumes:
       - uploads:/app/uploads
     depends_on:
@@ -38,7 +38,7 @@ services:
       context: ../crawlers
     container_name: daad-ingestor
     env_file:
-      - ../backend/.env
+      - ./.env
     environment:
       POSTGRES_HOST: database
       POSTGRES_PORT: 5432
@@ -67,7 +67,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       PGDATA: /data/postgres
     env_file:
-      - ../backend/.env
+      - ./.env
     volumes:
       - db:/data/postgres
     healthcheck:
