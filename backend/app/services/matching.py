@@ -112,8 +112,8 @@ class MatchingService:
         
         # --- Field matching (30 points max) ---
         preferred_fields = profile.get("preferred_fields", [])
-        if preferred_fields and course.field_of_study:
-            course_field = course.field_of_study
+        if preferred_fields and course.field:
+            course_field = course.field
             
             # Exact match
             if course_field in preferred_fields:
@@ -154,33 +154,35 @@ class MatchingService:
         
         # --- Budget matching (20 points max) ---
         budget_max = profile.get("budget_max")
-        if budget_max is not None and course.tuition_fee is not None:
-            if course.tuition_fee <= budget_max:
+        if budget_max is not None and course.tuition_fee_amount is not None:
+            if course.tuition_fee_amount <= budget_max:
                 score += 20
-                if course.tuition_fee == 0:
+                if course.tuition_fee_amount == 0 or course.is_tuition_free:
                     reasons.append("✓ Tuition-free program!")
                 else:
-                    reasons.append(f"✓ Within budget (€{course.tuition_fee:,}/year)")
-            elif course.tuition_fee <= budget_max * 1.2:  # Within 20% overage
+                    reasons.append(f"✓ Within budget (€{course.tuition_fee_amount:,}/year)")
+            elif course.tuition_fee_amount <= budget_max * 1.2:  # Within 20% overage
                 score += 10
-                warnings.append(f"⚠ Slightly over budget (€{course.tuition_fee:,}/year)")
+                warnings.append(f"⚠ Slightly over budget (€{course.tuition_fee_amount:,}/year)")
             else:
-                warnings.append(f"⚠ Over budget (€{course.tuition_fee:,}/year)")
+                warnings.append(f"⚠ Over budget (€{course.tuition_fee_amount:,}/year)")
         
         # --- Degree level matching (10 points max) ---
         preferred_level = profile.get("preferred_degree_level")
         if preferred_level and course.degree_level:
-            if course.degree_level.lower() == preferred_level.lower():
+            course_level = course.degree_level.value if hasattr(course.degree_level, 'value') else str(course.degree_level)
+            if course_level.lower() == preferred_level.lower():
                 score += 10
-                reasons.append(f"✓ {course.degree_level} level")
+                reasons.append(f"✓ {course_level.capitalize()} level")
         
         # --- Language matching (10 points max) ---
         language_pref = profile.get("language_preference")
         if language_pref and course.teaching_language:
-            if course.teaching_language.lower() == language_pref.lower():
+            course_lang = course.teaching_language.value if hasattr(course.teaching_language, 'value') else str(course.teaching_language)
+            if course_lang.lower() == language_pref.lower():
                 score += 10
-                reasons.append(f"✓ Taught in {course.teaching_language}")
-            elif course.teaching_language.lower() == "english":
+                reasons.append(f"✓ Taught in {course_lang.capitalize()}")
+            elif course_lang.lower() == "english":
                 score += 5
                 reasons.append("✓ English-taught")
         
@@ -198,7 +200,7 @@ class MatchingService:
                 score += 1
         
         # Scholarship availability bonus
-        if course.scholarship_available:
+        if course.scholarships_available:
             score += 3
             reasons.append("✓ Scholarships available")
         
@@ -220,8 +222,8 @@ class MatchingService:
                 warnings.append(f"⚠ GMAT score below minimum ({course.gmat_minimum})")
         
         # Deadline warning
-        if course.application_deadline:
-            days_until = (course.application_deadline - date.today()).days
+        if course.deadline_fall:
+            days_until = (course.deadline_fall - date.today()).days
             if days_until < 0:
                 warnings.append("⚠ Deadline passed")
                 score = max(0, score - 20)  # Penalize closed applications
@@ -233,10 +235,10 @@ class MatchingService:
         # GPA check
         user_gpa = profile.get("gpa")
         gpa_scale = profile.get("gpa_scale", "4.0")
-        if user_gpa and course.min_gpa:
+        if user_gpa and course.gpa_minimum:
             normalized_gpa = self._normalize_gpa(user_gpa, gpa_scale)
-            if normalized_gpa < course.min_gpa:
-                warnings.append(f"⚠ GPA below minimum ({course.min_gpa})")
+            if normalized_gpa < course.gpa_minimum:
+                warnings.append(f"⚠ GPA below minimum ({course.gpa_minimum})")
         
         # Cap score at 100
         score = min(score, max_score)
@@ -277,7 +279,6 @@ class MatchingService:
         query = (
             select(Course)
             .join(University, Course.university_id == University.id)
-            .where(Course.is_active == True)
         )
         
         # Pre-filter by countries if specified
@@ -301,8 +302,8 @@ class MatchingService:
         if budget_max is not None and budget_max < 999999:
             query = query.where(
                 or_(
-                    Course.tuition_fee.is_(None),
-                    Course.tuition_fee <= budget_max * 1.5
+                    Course.tuition_fee_amount.is_(None),
+                    Course.tuition_fee_amount <= budget_max * 1.5
                 )
             )
         
@@ -333,20 +334,22 @@ class MatchingService:
         results = []
         for item in paginated:
             course = item["course"]
+            course_level = course.degree_level.value if hasattr(course.degree_level, 'value') else str(course.degree_level)
+            course_lang = course.teaching_language.value if hasattr(course.teaching_language, 'value') else str(course.teaching_language)
             results.append({
                 "id": course.id,
                 "program_name": course.name,
                 "university_name": course.university.name if course.university else None,
                 "country": course.university.country if course.university else None,
                 "city": course.university.city if course.university else None,
-                "degree_level": course.degree_level,
-                "field_of_study": course.field_of_study,
-                "tuition_fee": course.tuition_fee,
-                "teaching_language": course.teaching_language,
+                "degree_level": course_level,
+                "field_of_study": course.field,
+                "tuition_fee": course.tuition_fee_amount,
+                "teaching_language": course_lang,
                 "duration_months": course.duration_months,
-                "application_deadline": course.application_deadline.isoformat() if course.application_deadline else None,
+                "application_deadline": course.deadline_fall.isoformat() if course.deadline_fall else None,
                 "university_ranking_qs": course.university.ranking_qs if course.university else None,
-                "scholarship_available": course.scholarship_available,
+                "scholarship_available": course.scholarships_available,
                 "match_score": item["score"],
                 "match_reasons": item["match_reasons"],
                 "warnings": item["warnings"]
@@ -367,7 +370,6 @@ class MatchingService:
         query = (
             select(Course)
             .join(University, Course.university_id == University.id)
-            .where(Course.is_active == True)
         )
         
         # Simple filters
