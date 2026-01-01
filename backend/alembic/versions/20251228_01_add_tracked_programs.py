@@ -29,9 +29,9 @@ def upgrade() -> None:
     )
     priority_enum = sa.Enum("reach", "target", "safety", name="trackedprogrampriority")
 
-    bind = op.get_bind()
-    status_enum.create(bind, checkfirst=True)
-    priority_enum.create(bind, checkfirst=True)
+    #bind = op.get_bind()
+    #status_enum.create(bind, checkfirst=True)
+    #priority_enum.create(bind, checkfirst=True)
 
     op.create_table(
         "tracked_programs",

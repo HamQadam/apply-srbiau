@@ -1,12 +1,21 @@
-import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { courseApi, universityApi, trackerApi } from '../../api/services';
 import { useAuth } from '../../contexts/AuthContext';
+import { PageTransition } from '../../components/Transitions/PageTransition';
+import { Skeleton } from '../../components/Feedback/Skeleton';
+import { Spinner } from '../../components/Feedback/Spinner';
+import { cn } from '../../lib/cn';
+import { formatCurrency, formatDate } from '../../lib/format';
 import type { Course, DegreeLevel } from '../../types';
 
 export function ExplorePage() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
+  const { t, i18n } = useTranslation();
   const [courses, setCourses] = useState<Course[]>([]);
   const [countries, setCountries] = useState<Array<{ country: string; count: number }>>([]);
   const [fields, setFields] = useState<Array<{ field: string; count: number }>>([]);
@@ -38,6 +47,7 @@ export function ExplorePage() {
       setFields(fieldsData);
     } catch (err) {
       console.error('Failed to load filters:', err);
+      toast.error(t('explore.filtersError'));
     }
   };
 
@@ -55,6 +65,7 @@ export function ExplorePage() {
       setCourses(data);
     } catch (err) {
       console.error('Failed to search:', err);
+      toast.error(t('explore.searchError'));
     } finally {
       setLoading(false);
     }
@@ -69,38 +80,40 @@ export function ExplorePage() {
     setAdding(courseId);
     try {
       await trackerApi.addProgram({ course_id: courseId });
+      toast.success(t('explore.added'));
       navigate('/dashboard');
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to add');
+      toast.error(err instanceof Error ? err.message : t('explore.addError'));
     } finally {
       setAdding(null);
     }
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
+    <PageTransition>
+      <div className="max-w-7xl mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Explore Programs</h1>
-        <p className="text-gray-600 mt-1">Find your perfect program and add it to your tracker</p>
+        <h1 className="text-2xl font-bold text-text-primary">{t('explore.title')}</h1>
+        <p className="text-text-muted mt-1">{t('explore.subtitle')}</p>
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4 mb-6">
+      <div className="bg-surface rounded-xl border border-border p-4 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search programs..."
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder={t('explore.searchPlaceholder')}
+            className="px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent bg-background"
           />
           
           <select
             value={country}
             onChange={(e) => setCountry(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent bg-background"
           >
-            <option value="">All Countries</option>
+            <option value="">{t('explore.filters.allCountries')}</option>
             {countries.map((c) => (
               <option key={c.country} value={c.country}>
                 {c.country} ({c.count})
@@ -111,9 +124,9 @@ export function ExplorePage() {
           <select
             value={field}
             onChange={(e) => setField(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent bg-background"
           >
-            <option value="">All Fields</option>
+            <option value="">{t('explore.filters.allFields')}</option>
             {fields.map((f) => (
               <option key={f.field} value={f.field}>
                 {f.field} ({f.count})
@@ -124,22 +137,22 @@ export function ExplorePage() {
           <select
             value={degreeLevel}
             onChange={(e) => setDegreeLevel(e.target.value as DegreeLevel | '')}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent bg-background"
           >
-            <option value="">All Degrees</option>
-            <option value="bachelor">Bachelor</option>
-            <option value="master">Master</option>
-            <option value="phd">PhD</option>
+            <option value="">{t('explore.filters.allDegrees')}</option>
+            <option value="bachelor">{t('degree.bachelor')}</option>
+            <option value="master">{t('degree.master')}</option>
+            <option value="phd">{t('degree.phd')}</option>
           </select>
           
-          <label className="flex items-center space-x-2 px-3 py-2">
+          <label className="flex items-center gap-2 px-3 py-2">
             <input
               type="checkbox"
               checked={tuitionFreeOnly}
               onChange={(e) => setTuitionFreeOnly(e.target.checked)}
-              className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+              className="w-4 h-4 text-brand-primary rounded focus:ring-brand-primary"
             />
-            <span className="text-sm text-gray-700">Tuition-free only</span>
+            <span className="text-sm text-text-secondary">{t('explore.filters.tuitionFree')}</span>
           </label>
         </div>
       </div>
@@ -148,89 +161,116 @@ export function ExplorePage() {
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i} className="bg-gray-100 rounded-xl h-48 animate-pulse"></div>
+            <Skeleton key={i} className="h-48 rounded-xl" />
           ))}
         </div>
       ) : courses.length === 0 ? (
         <div className="text-center py-12">
           <span className="text-5xl">🔍</span>
-          <h3 className="mt-4 text-lg font-medium text-gray-900">No programs found</h3>
-          <p className="mt-2 text-gray-600">Try adjusting your filters</p>
+          <h3 className="mt-4 text-lg font-medium text-text-primary">{t('explore.emptyTitle')}</h3>
+          <p className="mt-2 text-text-muted">{t('explore.emptySubtitle')}</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <motion.div
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+          initial="hidden"
+          animate="visible"
+          variants={{ visible: { transition: { staggerChildren: 0.08 } } }}
+        >
           {courses.map((course) => (
-            <div
+            <motion.div
               key={course.id}
-              className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition-shadow"
+              variants={{ hidden: { opacity: 0, y: 12 }, visible: { opacity: 1, y: 0 } }}
+              whileHover={{ y: -2 }}
+              className="bg-surface rounded-xl border border-border p-4 hover:shadow-md transition-shadow"
             >
               <div className="flex items-start justify-between mb-2">
-                <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                <span className={cn(
+                  'text-xs font-medium px-2 py-1 rounded-full',
                   course.degree_level === 'master'
-                    ? 'bg-blue-100 text-blue-700'
+                    ? 'bg-brand-primary/10 text-brand-primary'
                     : course.degree_level === 'phd'
-                    ? 'bg-purple-100 text-purple-700'
-                    : 'bg-gray-100 text-gray-700'
-                }`}>
-                  {course.degree_level.toUpperCase()}
+                    ? 'bg-brand-secondary/10 text-brand-secondary'
+                    : 'bg-elevated text-text-secondary'
+                )}>
+                  {t(`degree.${course.degree_level}`)}
                 </span>
                 {course.university_ranking_qs && (
-                  <span className="text-xs text-gray-500">QS #{course.university_ranking_qs}</span>
+                  <span className="text-xs text-text-muted">{t('explore.qsRank', { rank: course.university_ranking_qs })}</span>
                 )}
               </div>
               
-              <h3 className="font-semibold text-gray-900 mb-1">{course.name}</h3>
-              <p className="text-sm text-gray-600 mb-3">
+              <h3 className="font-semibold text-text-primary mb-1">{course.name}</h3>
+              <p className="text-sm text-text-muted mb-3">
                 {course.university_name} · {course.university_country}
               </p>
               
               <div className="flex flex-wrap gap-2 mb-4 text-xs">
                 {course.is_tuition_free ? (
-                  <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full">
-                    Tuition-free
+                  <span className="px-2 py-1 bg-status-success/10 text-status-success rounded-full">
+                    {t('explore.badges.tuitionFree')}
                   </span>
                 ) : course.tuition_fee_amount ? (
-                  <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full">
-                    €{course.tuition_fee_amount.toLocaleString()}/year
+                  <span className="px-2 py-1 bg-elevated text-text-secondary rounded-full">
+                    {formatCurrency(
+                      course.tuition_fee_amount,
+                      i18n.language,
+                      course.tuition_fee_currency ?? 'EUR'
+                    )}{' '}
+                    {t('explore.badges.perYear')}
                   </span>
                 ) : null}
                 
                 {course.deadline_fall && (
-                  <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded-full">
-                    Due: {new Date(course.deadline_fall).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  <span className="px-2 py-1 bg-status-warning/10 text-status-warning rounded-full">
+                    {t('explore.badges.deadline', {
+                      date: formatDate(course.deadline_fall, i18n.language, { month: 'short', day: 'numeric' }),
+                    })}
                   </span>
                 )}
                 
                 {course.scholarships_available && (
-                  <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full">
-                    Scholarships
+                  <span className="px-2 py-1 bg-brand-accent/10 text-brand-accent rounded-full">
+                    {t('explore.badges.scholarships')}
                   </span>
                 )}
               </div>
               
-              <div className="flex items-center space-x-2">
-                <button
+              <div className="flex items-center gap-2">
+                <motion.button
                   onClick={() => handleAddToTracker(course.id)}
                   disabled={adding === course.id}
-                  className="flex-1 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.97 }}
+                  className="flex-1 py-2 bg-brand-primary text-white text-sm font-medium rounded-lg hover:bg-brand-secondary disabled:opacity-50 transition-colors"
                 >
-                  {adding === course.id ? 'Adding...' : '+ Add to Tracker'}
-                </button>
+                  {adding === course.id ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <Spinner className="h-4 w-4 border-white border-t-transparent" />
+                      {t('explore.adding')}
+                    </span>
+                  ) : (
+                    t('explore.addToTracker')
+                  )}
+                </motion.button>
                 {course.program_url && (
-                  <a
+                  <motion.a
                     href={course.program_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-3 py-2 border border-gray-300 text-gray-600 text-sm rounded-lg hover:bg-gray-50"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.97 }}
+                    className="px-3 py-2 border border-border text-text-secondary text-sm rounded-lg hover:bg-elevated"
                   >
                     ↗
-                  </a>
+                  </motion.a>
                 )}
               </div>
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       )}
-    </div>
+      </div>
+    </PageTransition>
   );
 }

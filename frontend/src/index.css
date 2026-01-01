@@ -2,26 +2,71 @@
 @tailwind components;
 @tailwind utilities;
 
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+@layer base {
+  :root {
+    --bg-background: 245 247 250;
+    --bg-surface: 255 255 255;
+    --bg-elevated: 248 250 252;
+    --text-primary: 17 24 39;
+    --text-secondary: 55 65 81;
+    --text-muted: 107 114 128;
+    --border: 226 232 240;
+    --brand-primary: 37 99 235;
+    --brand-secondary: 99 102 241;
+    --brand-accent: 16 185 129;
+    --status-success: 16 185 129;
+    --status-warning: 245 158 11;
+    --status-danger: 239 68 68;
+    --status-info: 59 130 246;
+    --bg-inverse: 2 6 23;
+    --text-inverse: 248 250 252;
+    --text-inverse-muted: 148 163 184;
+  }
+
+  .dark {
+    --bg-background: 12 15 20;
+    --bg-surface: 20 25 32;
+    --bg-elevated: 28 34 42;
+    --text-primary: 226 232 240;
+    --text-secondary: 148 163 184;
+    --text-muted: 100 116 139;
+    --border: 30 41 59;
+    --brand-primary: 96 165 250;
+    --brand-secondary: 129 140 248;
+    --brand-accent: 52 211 153;
+    --status-success: 52 211 153;
+    --status-warning: 251 191 36;
+    --status-danger: 248 113 113;
+    --status-info: 96 165 250;
+    --bg-inverse: 2 6 23;
+    --text-inverse: 241 245 249;
+    --text-inverse-muted: 148 163 184;
+  }
+}
+
 /* Custom styles */
 html {
   scroll-behavior: smooth;
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
-    Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  font-family: 'Manrope', ui-sans-serif, system-ui, sans-serif;
+  background-color: rgb(var(--bg-background));
+  color: rgb(var(--text-primary));
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 /* Focus styles */
 *:focus-visible {
-  @apply outline-none ring-2 ring-blue-500 ring-offset-2;
+  @apply outline-none ring-2 ring-brand-primary ring-offset-2 ring-offset-background;
 }
 
 /* Selection */
 ::selection {
-  @apply bg-blue-600 text-white;
+  @apply bg-brand-primary text-white;
 }
 
 /* Custom scrollbar */
@@ -31,13 +76,58 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  @apply bg-gray-100;
+  @apply bg-elevated;
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-gray-300 rounded-full;
+  @apply bg-border rounded-full;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-gray-400;
+  @apply bg-text-muted;
+}
+
+@layer utilities {
+  .text-start {
+    text-align: start;
+  }
+  .text-end {
+    text-align: end;
+  }
+  .ms-2 {
+    margin-inline-start: 0.5rem;
+  }
+  .ms-3 {
+    margin-inline-start: 0.75rem;
+  }
+  .ms-4 {
+    margin-inline-start: 1rem;
+  }
+  .me-2 {
+    margin-inline-end: 0.5rem;
+  }
+  .me-3 {
+    margin-inline-end: 0.75rem;
+  }
+  .me-4 {
+    margin-inline-end: 1rem;
+  }
+  .ps-3 {
+    padding-inline-start: 0.75rem;
+  }
+  .ps-4 {
+    padding-inline-start: 1rem;
+  }
+  .pe-3 {
+    padding-inline-end: 0.75rem;
+  }
+  .pe-4 {
+    padding-inline-end: 1rem;
+  }
+  .start-0 {
+    inset-inline-start: 0;
+  }
+  .end-0 {
+    inset-inline-end: 0;
+  }
 }

@@ -1,12 +1,18 @@
+import { motion } from 'framer-motion';
 import { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { authApi } from '../../api/services';
+import { PageTransition } from '../../components/Transitions/PageTransition';
+import { Spinner } from '../../components/Feedback/Spinner';
 
 export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { login } = useAuth();
+  const { t } = useTranslation();
   
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
   const [phone, setPhone] = useState('');
@@ -28,8 +34,11 @@ export function LoginPage() {
         setDebugCode(response.debug_code);
       }
       setStep('otp');
+      toast.success(t('auth.otpSent'));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to send OTP');
+      const message = err instanceof Error ? err.message : t('auth.sendOtpError');
+      setError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -49,113 +58,138 @@ export function LoginPage() {
       } else {
         navigate(from);
       }
+      toast.success(t('auth.signedIn'));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Invalid OTP');
+      const message = err instanceof Error ? err.message : t('auth.invalidOtp');
+      setError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
   };
   
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4">
-      <div className="max-w-md w-full">
+    <PageTransition>
+      <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4">
+        <div className="max-w-md w-full">
         <div className="text-center mb-8">
           <span className="text-5xl">🎓</span>
-          <h1 className="mt-4 text-3xl font-bold text-gray-900">Welcome to Ghadam</h1>
-          <p className="mt-2 text-gray-600">
-            Track your university applications and learn from others' journeys
+          <h1 className="mt-4 text-3xl font-bold text-text-primary">{t('auth.welcomeTitle')}</h1>
+          <p className="mt-2 text-text-muted">
+            {t('auth.welcomeSubtitle')}
           </p>
         </div>
         
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+        <div className="bg-surface rounded-xl shadow-sm border border-border p-8">
           {step === 'phone' ? (
             <form onSubmit={handleRequestOTP}>
               <div className="mb-6">
-                <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
-                  Phone Number
+                <label htmlFor="phone" className="block text-sm font-medium text-text-secondary mb-2">
+                  {t('auth.phoneLabel')}
                 </label>
                 <input
                   id="phone"
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  placeholder="09123456789"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder={t('auth.phonePlaceholder')}
+                  className="w-full px-4 py-3 border border-border rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent bg-background"
                   required
                 />
               </div>
               
               {error && (
-                <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg">
+                <div className="mb-4 p-3 bg-status-danger/10 text-status-danger text-sm rounded-lg">
                   {error}
                 </div>
               )}
               
-              <button
+              <motion.button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.97 }}
+                className="w-full py-3 bg-brand-primary text-white font-medium rounded-lg hover:bg-brand-secondary disabled:opacity-50 transition-colors"
               >
-                {loading ? 'Sending...' : 'Send Verification Code'}
-              </button>
+                {loading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Spinner className="h-4 w-4 border-white border-t-transparent" />
+                    {t('auth.sending')}
+                  </span>
+                ) : (
+                  t('auth.sendCode')
+                )}
+              </motion.button>
             </form>
           ) : (
             <form onSubmit={handleVerifyOTP}>
-              <div className="mb-2 text-sm text-gray-600">
-                We sent a code to <span className="font-medium">{phone}</span>
+              <div className="mb-2 text-sm text-text-muted">
+                {t('auth.sentTo', { phone })}
               </div>
               
               {debugCode && (
-                <div className="mb-4 p-3 bg-amber-50 text-amber-700 text-sm rounded-lg">
-                  Debug mode: Your code is <span className="font-mono font-bold">{debugCode}</span>
+                <div className="mb-4 p-3 bg-status-warning/10 text-status-warning text-sm rounded-lg">
+                  {t('auth.debugCode', { code: debugCode })}
                 </div>
               )}
               
               <div className="mb-6">
-                <label htmlFor="otp" className="block text-sm font-medium text-gray-700 mb-2">
-                  Verification Code
+                <label htmlFor="otp" className="block text-sm font-medium text-text-secondary mb-2">
+                  {t('auth.codeLabel')}
                 </label>
                 <input
                   id="otp"
                   type="text"
                   value={otp}
                   onChange={(e) => setOtp(e.target.value)}
-                  placeholder="000000"
+                  placeholder={t('auth.codePlaceholder')}
                   maxLength={6}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-center text-2xl tracking-widest font-mono"
+                  className="w-full px-4 py-3 border border-border rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent text-center text-2xl tracking-widest font-mono bg-background"
                   required
                 />
               </div>
               
               {error && (
-                <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg">
+                <div className="mb-4 p-3 bg-status-danger/10 text-status-danger text-sm rounded-lg">
                   {error}
                 </div>
               )}
               
-              <button
+              <motion.button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.97 }}
+                className="w-full py-3 bg-brand-primary text-white font-medium rounded-lg hover:bg-brand-secondary disabled:opacity-50 transition-colors"
               >
-                {loading ? 'Verifying...' : 'Verify & Continue'}
-              </button>
+                {loading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Spinner className="h-4 w-4 border-white border-t-transparent" />
+                    {t('auth.verifying')}
+                  </span>
+                ) : (
+                  t('auth.verify')
+                )}
+              </motion.button>
               
-              <button
+              <motion.button
                 type="button"
                 onClick={() => setStep('phone')}
-                className="w-full mt-3 py-2 text-gray-600 text-sm hover:text-gray-900"
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.98 }}
+                className="w-full mt-3 py-2 text-text-muted text-sm hover:text-text-primary"
               >
-                Change phone number
-              </button>
+                {t('auth.changePhone')}
+              </motion.button>
             </form>
           )}
         </div>
         
-        <p className="mt-6 text-center text-sm text-gray-500">
-          By signing in, you agree to our Terms of Service and Privacy Policy
+        <p className="mt-6 text-center text-sm text-text-muted">
+          {t('auth.terms')}
         </p>
       </div>
-    </div>
+      </div>
+    </PageTransition>
   );
 }

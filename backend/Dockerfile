@@ -23,4 +23,4 @@ RUN mkdir -p /app/uploads
 EXPOSE 8888
 
 # Run migrations then start uvicorn
-CMD ["sh", "-c", "uv run alembic upgrade head && uv run uvicorn app.main:app --host 0.0.0.0 --port 8888"]
+CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8888"]

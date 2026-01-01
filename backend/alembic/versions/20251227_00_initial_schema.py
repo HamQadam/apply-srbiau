@@ -57,14 +57,14 @@ def upgrade() -> None:
         name="cefrlevel"
     )
 
-    bind = op.get_bind()
-    degree_level_enum.create(bind, checkfirst=True)
-    currency_enum.create(bind, checkfirst=True)
-    teaching_language_enum.create(bind, checkfirst=True)
-    onboarding_step_enum.create(bind, checkfirst=True)
-    transaction_type_enum.create(bind, checkfirst=True)
-    language_test_type_enum.create(bind, checkfirst=True)
-    cefr_level_enum.create(bind, checkfirst=True)
+    #bind = op.get_bind()
+    #degree_level_enum.create(bind, checkfirst=True)
+    #currency_enum.create(bind, checkfirst=True)
+    #teaching_language_enum.create(bind, checkfirst=True)
+    #onboarding_step_enum.create(bind, checkfirst=True)
+    #transaction_type_enum.create(bind, checkfirst=True)
+    #language_test_type_enum.create(bind, checkfirst=True)
+    #cefr_level_enum.create(bind, checkfirst=True)
 
     # =====================
     # UNIVERSITIES
@@ -196,14 +196,12 @@ def upgrade() -> None:
     op.create_table(
         "otp_codes",
         sa.Column("id", sa.Integer(), primary_key=True),
-        sa.Column("email", sa.String(255), nullable=False, index=True),
-        sa.Column("code", sa.String(10), nullable=False),
-        sa.Column("purpose", sa.String(50), nullable=False),
-        sa.Column("expires_at", sa.DateTime(), nullable=False),
-        sa.Column("used_at", sa.DateTime(), nullable=True),
+        sa.Column("phone", sa.String(20), nullable=False, index=True),
+        sa.Column("code", sa.String(6), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
+        sa.Column("expires_at", sa.DateTime(), nullable=False),
+        sa.Column("used", sa.Boolean(), nullable=False, server_default="false"),
     )
-
     # =====================
     # GHADAM TRANSACTIONS
     # =====================

@@ -23,8 +23,7 @@ log = logging.getLogger("crawler.db")
 
 
 def _now_utc() -> datetime:
-    return datetime.now(timezone.utc)
-
+    return datetime.utcnow()
 
 def _norm(s: str) -> str:
     """Normalize string for comparison."""

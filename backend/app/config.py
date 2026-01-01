@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     postgres_db: str = "apply_db"
     postgres_host: str = "localhost"
     postgres_port: int = 5432
-    use_sqlite: bool = True  # Use SQLite for local development
+    use_sqlite: bool = False	  # Use SQLite for local development
     
     @property
     def database_url(self) -> str:

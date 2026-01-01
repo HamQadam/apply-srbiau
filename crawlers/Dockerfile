@@ -8,6 +8,7 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 # Copy project files
 COPY pyproject.toml .
 COPY README.md .
+COPY db.py .
 COPY cli.py .
 COPY base/ base/
 COPY daad_ingestor/ daad_ingestor/

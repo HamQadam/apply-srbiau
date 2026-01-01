@@ -1,5 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import React, { useEffect, useMemo, useState } from 'react';
+import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 import { matchingApi } from '../../api/services';
+import { Spinner } from '../Feedback/Spinner';
+import { cn } from '../../lib/cn';
 import type { MatchingOptions, MatchingProfile } from '../../types';
 
 interface ProfileWizardProps {
@@ -8,9 +13,11 @@ interface ProfileWizardProps {
   initialProfile?: MatchingProfile;
 }
 
-const STEPS = ['Fields', 'Countries', 'Budget', 'Timeline', 'Extras'];
+const STEPS = ['fields', 'countries', 'budget', 'timeline', 'extras'];
+const PAGE_SIZE = 12;
 
 export const ProfileWizard: React.FC<ProfileWizardProps> = ({ onComplete, onSkip, initialProfile }) => {
+  const { t } = useTranslation();
   const [step, setStep] = useState(0);
   const [options, setOptions] = useState<MatchingOptions | null>(null);
   const [loading, setLoading] = useState(true);
@@ -29,6 +36,10 @@ export const ProfileWizard: React.FC<ProfileWizardProps> = ({ onComplete, onSkip
   const [gmatScore, setGmatScore] = useState<number | undefined>(initialProfile?.gmat_score);
   const [gpa, setGpa] = useState<number | undefined>(initialProfile?.gpa);
   const [gpaScale, setGpaScale] = useState(initialProfile?.gpa_scale || '4.0');
+  const [fieldQuery, setFieldQuery] = useState('');
+  const [countryQuery, setCountryQuery] = useState('');
+  const [showAllFields, setShowAllFields] = useState(false);
+  const [showAllCountries, setShowAllCountries] = useState(false);
   
   useEffect(() => {
     loadOptions();
@@ -39,11 +50,30 @@ export const ProfileWizard: React.FC<ProfileWizardProps> = ({ onComplete, onSkip
       const data = await matchingApi.getOptions();
       setOptions(data);
     } catch (err) {
-      setError('Failed to load options');
+      const message = t('wizard.loadError');
+      setError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
   };
+
+  const filteredFields = useMemo(() => {
+    if (!options?.fields) return [];
+    return options.fields.filter((field) =>
+      field.toLowerCase().includes(fieldQuery.trim().toLowerCase())
+    );
+  }, [options?.fields, fieldQuery]);
+
+  const filteredCountries = useMemo(() => {
+    if (!options?.countries) return [];
+    return options.countries.filter((country) =>
+      country.toLowerCase().includes(countryQuery.trim().toLowerCase())
+    );
+  }, [options?.countries, countryQuery]);
+
+  const visibleFields = showAllFields ? filteredFields : filteredFields.slice(0, PAGE_SIZE);
+  const visibleCountries = showAllCountries ? filteredCountries : filteredCountries.slice(0, PAGE_SIZE);
   
   const handleFieldToggle = (field: string) => {
     if (selectedFields.includes(field)) {
@@ -110,8 +140,11 @@ export const ProfileWizard: React.FC<ProfileWizardProps> = ({ onComplete, onSkip
     try {
       const result = await matchingApi.saveProfile(profile);
       onComplete(result.profile, result.bonus_awarded);
+      setSaving(false);
     } catch (err) {
-      setError('Failed to save profile');
+      const message = t('wizard.saveError');
+      setError(message);
+      toast.error(message);
       setSaving(false);
     }
   };
@@ -119,7 +152,7 @@ export const ProfileWizard: React.FC<ProfileWizardProps> = ({ onComplete, onSkip
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+        <Spinner className="h-12 w-12" />
       </div>
     );
   }
@@ -127,7 +160,7 @@ export const ProfileWizard: React.FC<ProfileWizardProps> = ({ onComplete, onSkip
   if (!options) {
     return (
       <div className="text-center py-12">
-        <p className="text-red-600">Failed to load options. Please refresh.</p>
+        <p className="text-status-danger">{t('wizard.loadError')}</p>
       </div>
     );
   }
@@ -139,258 +172,362 @@ export const ProfileWizard: React.FC<ProfileWizardProps> = ({ onComplete, onSkip
         <div className="flex justify-between items-center mb-2">
           {STEPS.map((s, i) => (
             <div key={s} className="flex items-center">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all ${
-                i <= step 
-                  ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white' 
-                  : 'bg-gray-200 text-gray-500'
-              }`}>
+              <div
+                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all ${
+                  i <= step
+                    ? 'bg-gradient-to-r from-brand-primary to-brand-secondary text-white'
+                    : 'bg-elevated text-text-muted'
+                }`}
+              >
                 {i + 1}
               </div>
               {i < STEPS.length - 1 && (
-                <div className={`w-16 h-1 mx-1 rounded transition-all ${
-                  i < step ? 'bg-gradient-to-r from-indigo-600 to-purple-600' : 'bg-gray-200'
-                }`} />
+                <div
+                  className={`w-16 h-1 mx-1 rounded transition-all ${
+                    i < step ? 'bg-gradient-to-r from-brand-primary to-brand-secondary' : 'bg-elevated'
+                  }`}
+                />
               )}
             </div>
           ))}
         </div>
-        <div className="flex justify-between text-xs text-gray-500">
+        <div className="flex justify-between text-xs text-text-muted">
           {STEPS.map((s, i) => (
-            <span key={s} className={i === step ? 'text-indigo-600 font-medium' : ''}>{s}</span>
+            <span key={s} className={i === step ? 'text-brand-primary font-medium' : ''}>
+              {t(`wizard.steps.${s}`)}
+            </span>
           ))}
         </div>
       </div>
       
       {/* Step content */}
-      <div className="bg-white rounded-2xl shadow-lg p-6 min-h-[400px]">
-        {/* Step 1: Fields */}
-        {step === 0 && (
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">What do you want to study?</h2>
-            <p className="text-gray-500 mb-6">Select up to 3 fields of interest</p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {options.fields.map(field => (
-                <button
-                  key={field}
-                  onClick={() => handleFieldToggle(field)}
-                  disabled={!selectedFields.includes(field) && selectedFields.length >= 3}
-                  className={`p-3 rounded-xl text-sm font-medium transition-all ${
-                    selectedFields.includes(field)
-                      ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md'
-                      : selectedFields.length >= 3
-                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  {field}
-                </button>
-              ))}
-            </div>
-            {selectedFields.length > 0 && (
-              <p className="mt-4 text-sm text-indigo-600">
-                Selected: {selectedFields.join(', ')}
-              </p>
-            )}
-          </div>
-        )}
-        
-        {/* Step 2: Countries */}
-        {step === 1 && (
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Where do you want to study?</h2>
-            <p className="text-gray-500 mb-6">Select your preferred countries</p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {options.countries.map(country => (
-                <button
-                  key={country}
-                  onClick={() => handleCountryToggle(country)}
-                  className={`p-3 rounded-xl text-sm font-medium transition-all ${
-                    selectedCountries.includes(country)
-                      ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  {country}
-                </button>
-              ))}
-            </div>
-            {selectedCountries.length > 0 && (
-              <p className="mt-4 text-sm text-indigo-600">
-                Selected: {selectedCountries.join(', ')}
-              </p>
-            )}
-          </div>
-        )}
-        
-        {/* Step 3: Budget */}
-        {step === 2 && (
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">What's your budget?</h2>
-            <p className="text-gray-500 mb-6">Select your annual tuition budget range</p>
-            <div className="space-y-3">
-              {Object.entries(options.budget_ranges).map(([key, range]) => (
-                <button
-                  key={key}
-                  onClick={() => setBudgetRange(key)}
-                  className={`w-full p-4 rounded-xl text-left transition-all ${
-                    budgetRange === key
-                      ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  <div className="font-medium">{range.label}</div>
-                  {key === 'free' && (
-                    <div className={`text-sm ${budgetRange === key ? 'text-indigo-100' : 'text-gray-500'}`}>
-                      🎓 Many programs in Germany, Norway, etc.
-                    </div>
-                  )}
-                </button>
-              ))}
-            </div>
-            <div className="mt-6">
-              <label className="flex items-center gap-3 p-4 bg-amber-50 rounded-xl cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={preferScholarships}
-                  onChange={(e) => setPreferScholarships(e.target.checked)}
-                  className="w-5 h-5 rounded text-amber-600 focus:ring-amber-500"
-                />
-                <div>
-                  <div className="font-medium text-amber-800">Prioritize programs with scholarships</div>
-                  <div className="text-sm text-amber-600">We'll highlight programs offering financial aid</div>
-                </div>
-              </label>
-            </div>
-          </div>
-        )}
-        
-        {/* Step 4: Timeline */}
-        {step === 3 && (
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">When do you plan to start?</h2>
-            <p className="text-gray-500 mb-6">Select your target degree and intake</p>
-            
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Degree Level</label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {options.degree_levels.map(level => (
-                  <button
-                    key={level}
-                    onClick={() => setDegreeLevel(level)}
-                    className={`p-3 rounded-xl text-sm font-medium transition-all ${
-                      degreeLevel === level
-                        ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    {level}
-                  </button>
-                ))}
-              </div>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Target Intake</label>
-              <div className="grid grid-cols-2 gap-2">
-                {options.intake_options.map(option => (
-                  <button
-                    key={option.value}
-                    onClick={() => setTargetIntake(option.value)}
-                    className={`p-3 rounded-xl text-sm font-medium transition-all ${
-                      targetIntake === option.value
-                        ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-        
-        {/* Step 5: Extras */}
-        {step === 4 && (
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Almost done!</h2>
-            <p className="text-gray-500 mb-6">Add optional details for better matches</p>
-            
-            <div className="space-y-6">
+      <div className="bg-surface rounded-2xl shadow-lg p-6 min-h-[420px] border border-border">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={step}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.2 }}
+          >
+            {/* Step 1: Fields */}
+            {step === 0 && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Teaching Language</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {options.teaching_languages.map(lang => (
-                    <button
-                      key={lang}
-                      onClick={() => setLanguagePreference(lang)}
-                      className={`p-3 rounded-xl text-sm font-medium transition-all ${
-                        languagePreference === lang
-                          ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
+                <h2 className="text-2xl font-bold text-text-primary mb-2">{t('wizard.fields.title')}</h2>
+                <p className="text-text-muted mb-4">{t('wizard.fields.subtitle')}</p>
+                <div className="mb-4">
+                  <input
+                    value={fieldQuery}
+                    onChange={(e) => setFieldQuery(e.target.value)}
+                    placeholder={t('wizard.fields.searchPlaceholder')}
+                    className="w-full px-4 py-2.5 border border-border rounded-xl bg-background focus:ring-2 focus:ring-brand-primary focus:border-transparent"
+                  />
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {visibleFields.map((field) => (
+                    <motion.button
+                      key={field}
+                      onClick={() => handleFieldToggle(field)}
+                      disabled={!selectedFields.includes(field) && selectedFields.length >= 3}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.97 }}
+                      className={cn(
+                        'p-3 rounded-xl text-sm font-medium transition-all',
+                        selectedFields.includes(field)
+                          ? 'bg-gradient-to-r from-brand-primary to-brand-secondary text-white shadow-md'
+                          : selectedFields.length >= 3
+                          ? 'bg-elevated text-text-muted cursor-not-allowed'
+                          : 'bg-elevated text-text-secondary hover:bg-elevated/80'
+                      )}
                     >
-                      {lang}
-                    </button>
+                      {field}
+                    </motion.button>
                   ))}
                 </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">GRE Score (optional)</label>
-                  <input
-                    type="number"
-                    value={greScore || ''}
-                    onChange={(e) => setGreScore(e.target.value ? parseInt(e.target.value) : undefined)}
-                    placeholder="260-340"
-                    className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">GMAT Score (optional)</label>
-                  <input
-                    type="number"
-                    value={gmatScore || ''}
-                    onChange={(e) => setGmatScore(e.target.value ? parseInt(e.target.value) : undefined)}
-                    placeholder="200-800"
-                    className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  />
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">GPA (optional)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={gpa || ''}
-                    onChange={(e) => setGpa(e.target.value ? parseFloat(e.target.value) : undefined)}
-                    placeholder="Your GPA"
-                    className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">GPA Scale</label>
-                  <select
-                    value={gpaScale}
-                    onChange={(e) => setGpaScale(e.target.value)}
-                    className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                {filteredFields.length > PAGE_SIZE && (
+                  <motion.button
+                    onClick={() => setShowAllFields((prev) => !prev)}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.97 }}
+                    className="mt-4 text-sm text-brand-primary hover:text-brand-secondary"
                   >
-                    <option value="4.0">4.0 Scale</option>
-                    <option value="20">20 Scale (French)</option>
-                    <option value="100">100 Scale</option>
-                    <option value="10">10 Scale (Indian)</option>
-                  </select>
+                    {showAllFields ? t('wizard.showLess') : t('wizard.showMore')}
+                  </motion.button>
+                )}
+                {selectedFields.length > 0 && (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {selectedFields.map((field) => (
+                      <motion.button
+                        key={field}
+                        onClick={() => handleFieldToggle(field)}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.97 }}
+                        className="px-3 py-1 rounded-full text-xs bg-brand-primary/10 text-brand-primary"
+                      >
+                        {field} ×
+                      </motion.button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Step 2: Countries */}
+            {step === 1 && (
+              <div>
+                <h2 className="text-2xl font-bold text-text-primary mb-2">{t('wizard.countries.title')}</h2>
+                <p className="text-text-muted mb-4">{t('wizard.countries.subtitle')}</p>
+                <div className="mb-4">
+                  <input
+                    value={countryQuery}
+                    onChange={(e) => setCountryQuery(e.target.value)}
+                    placeholder={t('wizard.countries.searchPlaceholder')}
+                    className="w-full px-4 py-2.5 border border-border rounded-xl bg-background focus:ring-2 focus:ring-brand-primary focus:border-transparent"
+                  />
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {visibleCountries.map((country) => (
+                    <motion.button
+                      key={country}
+                      onClick={() => handleCountryToggle(country)}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.97 }}
+                      className={cn(
+                        'p-3 rounded-xl text-sm font-medium transition-all',
+                        selectedCountries.includes(country)
+                          ? 'bg-gradient-to-r from-brand-primary to-brand-secondary text-white shadow-md'
+                          : 'bg-elevated text-text-secondary hover:bg-elevated/80'
+                      )}
+                    >
+                      {country}
+                    </motion.button>
+                  ))}
+                </div>
+                {filteredCountries.length > PAGE_SIZE && (
+                  <motion.button
+                    onClick={() => setShowAllCountries((prev) => !prev)}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.97 }}
+                    className="mt-4 text-sm text-brand-primary hover:text-brand-secondary"
+                  >
+                    {showAllCountries ? t('wizard.showLess') : t('wizard.showMore')}
+                  </motion.button>
+                )}
+                {selectedCountries.length > 0 && (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {selectedCountries.map((country) => (
+                      <motion.button
+                        key={country}
+                        onClick={() => handleCountryToggle(country)}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.97 }}
+                        className="px-3 py-1 rounded-full text-xs bg-brand-primary/10 text-brand-primary"
+                      >
+                        {country} ×
+                      </motion.button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Step 3: Budget */}
+            {step === 2 && (
+              <div>
+                <h2 className="text-2xl font-bold text-text-primary mb-2">{t('wizard.budget.title')}</h2>
+                <p className="text-text-muted mb-6">{t('wizard.budget.subtitle')}</p>
+                <div className="space-y-3">
+                  {Object.entries(options.budget_ranges).map(([key, range]) => (
+                    <motion.button
+                      key={key}
+                      onClick={() => setBudgetRange(key)}
+                      whileHover={{ scale: 1.01 }}
+                      whileTap={{ scale: 0.97 }}
+                      className={cn(
+                        'w-full p-4 rounded-xl text-start transition-all',
+                        budgetRange === key
+                          ? 'bg-gradient-to-r from-brand-primary to-brand-secondary text-white shadow-md'
+                          : 'bg-elevated text-text-secondary hover:bg-elevated/80'
+                      )}
+                    >
+                      <div className="font-medium">{range.label}</div>
+                      {key === 'free' && (
+                        <div className={`text-sm ${budgetRange === key ? 'text-white/80' : 'text-text-muted'}`}>
+                          {t('wizard.budget.freeHint')}
+                        </div>
+                      )}
+                    </motion.button>
+                  ))}
+                </div>
+                <div className="mt-6">
+                  <label className="flex items-center gap-3 p-4 bg-status-warning/10 rounded-xl cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={preferScholarships}
+                      onChange={(e) => setPreferScholarships(e.target.checked)}
+                      className="w-5 h-5 rounded text-status-warning focus:ring-status-warning"
+                    />
+                    <div>
+                      <div className="font-medium text-text-primary">{t('wizard.budget.scholarshipsTitle')}</div>
+                      <div className="text-sm text-text-muted">{t('wizard.budget.scholarshipsSubtitle')}</div>
+                    </div>
+                  </label>
                 </div>
               </div>
-            </div>
-          </div>
-        )}
-        
+            )}
+
+            {/* Step 4: Timeline */}
+            {step === 3 && (
+              <div>
+                <h2 className="text-2xl font-bold text-text-primary mb-2">{t('wizard.timeline.title')}</h2>
+                <p className="text-text-muted mb-6">{t('wizard.timeline.subtitle')}</p>
+
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-text-secondary mb-2">
+                    {t('wizard.timeline.degreeLevel')}
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {options.degree_levels.map((level) => (
+                      <motion.button
+                        key={level}
+                        onClick={() => setDegreeLevel(level)}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.97 }}
+                        className={cn(
+                          'p-3 rounded-xl text-sm font-medium transition-all',
+                          degreeLevel === level
+                            ? 'bg-gradient-to-r from-brand-primary to-brand-secondary text-white shadow-md'
+                            : 'bg-elevated text-text-secondary hover:bg-elevated/80'
+                        )}
+                      >
+                        {level}
+                      </motion.button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-text-secondary mb-2">
+                    {t('wizard.timeline.intake')}
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {options.intake_options.map((option) => (
+                      <motion.button
+                        key={option.value}
+                        onClick={() => setTargetIntake(option.value)}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.97 }}
+                        className={cn(
+                          'p-3 rounded-xl text-sm font-medium transition-all',
+                          targetIntake === option.value
+                            ? 'bg-gradient-to-r from-brand-primary to-brand-secondary text-white shadow-md'
+                            : 'bg-elevated text-text-secondary hover:bg-elevated/80'
+                        )}
+                      >
+                        {option.label}
+                      </motion.button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Step 5: Extras */}
+            {step === 4 && (
+              <div>
+                <h2 className="text-2xl font-bold text-text-primary mb-2">{t('wizard.extras.title')}</h2>
+                <p className="text-text-muted mb-6">{t('wizard.extras.subtitle')}</p>
+
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-medium text-text-secondary mb-2">
+                      {t('wizard.extras.language')}
+                    </label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {options.teaching_languages.map((lang) => (
+                        <motion.button
+                          key={lang}
+                          onClick={() => setLanguagePreference(lang)}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.97 }}
+                          className={cn(
+                            'p-3 rounded-xl text-sm font-medium transition-all',
+                            languagePreference === lang
+                              ? 'bg-gradient-to-r from-brand-primary to-brand-secondary text-white shadow-md'
+                              : 'bg-elevated text-text-secondary hover:bg-elevated/80'
+                          )}
+                        >
+                          {lang}
+                        </motion.button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-text-secondary mb-2">
+                        {t('wizard.extras.gre')}
+                      </label>
+                      <input
+                        type="number"
+                        value={greScore || ''}
+                        onChange={(e) => setGreScore(e.target.value ? parseInt(e.target.value) : undefined)}
+                        placeholder="260-340"
+                        className="w-full p-3 border border-border rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary bg-background"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-text-secondary mb-2">
+                        {t('wizard.extras.gmat')}
+                      </label>
+                      <input
+                        type="number"
+                        value={gmatScore || ''}
+                        onChange={(e) => setGmatScore(e.target.value ? parseInt(e.target.value) : undefined)}
+                        placeholder="200-800"
+                        className="w-full p-3 border border-border rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary bg-background"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-text-secondary mb-2">
+                        {t('wizard.extras.gpa')}
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={gpa || ''}
+                        onChange={(e) => setGpa(e.target.value ? parseFloat(e.target.value) : undefined)}
+                        placeholder={t('wizard.extras.gpaPlaceholder')}
+                        className="w-full p-3 border border-border rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary bg-background"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-text-secondary mb-2">
+                        {t('wizard.extras.gpaScale')}
+                      </label>
+                      <select
+                        value={gpaScale}
+                        onChange={(e) => setGpaScale(e.target.value)}
+                        className="w-full p-3 border border-border rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary bg-background"
+                      >
+                        <option value="4.0">{t('wizard.extras.gpaScales.four')}</option>
+                        <option value="20">{t('wizard.extras.gpaScales.twenty')}</option>
+                        <option value="100">{t('wizard.extras.gpaScales.hundred')}</option>
+                        <option value="10">{t('wizard.extras.gpaScales.ten')}</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </motion.div>
+        </AnimatePresence>
+
         {error && (
-          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
+          <div className="mt-4 p-3 bg-status-danger/10 border border-status-danger/30 rounded-xl text-status-danger text-sm">
             {error}
           </div>
         )}
@@ -399,46 +536,52 @@ export const ProfileWizard: React.FC<ProfileWizardProps> = ({ onComplete, onSkip
       {/* Navigation buttons */}
       <div className="flex justify-between items-center mt-6">
         <div className="flex items-center gap-4">
-          <button
+          <motion.button
             onClick={handleBack}
             disabled={step === 0}
-            className={`px-6 py-3 rounded-xl font-medium transition-all ${
-              step === 0
-                ? 'text-gray-400 cursor-not-allowed'
-                : 'text-gray-700 hover:bg-gray-100'
-            }`}
+            whileHover={step === 0 ? undefined : { scale: 1.02 }}
+            whileTap={step === 0 ? undefined : { scale: 0.97 }}
+            className={cn(
+              'px-6 py-3 rounded-xl font-medium transition-all',
+              step === 0 ? 'text-text-muted cursor-not-allowed' : 'text-text-secondary hover:bg-elevated'
+            )}
           >
-            Back
-          </button>
+            {t('wizard.back')}
+          </motion.button>
           {onSkip && (
-            <button
+            <motion.button
               onClick={onSkip}
-              className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.97 }}
+              className="text-sm text-text-muted hover:text-text-primary transition-colors"
             >
-              Skip for now
-            </button>
+              {t('wizard.skip')}
+            </motion.button>
           )}
         </div>
-        <button
+        <motion.button
           onClick={handleNext}
           disabled={!canProceed() || saving}
-          className={`px-8 py-3 rounded-xl font-medium transition-all shadow-lg ${
+          whileHover={canProceed() && !saving ? { scale: 1.02 } : undefined}
+          whileTap={canProceed() && !saving ? { scale: 0.97 } : undefined}
+          className={cn(
+            'px-8 py-3 rounded-xl font-medium transition-all shadow-lg',
             canProceed() && !saving
-              ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:shadow-xl shadow-indigo-500/25'
-              : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-          }`}
+              ? 'bg-gradient-to-r from-brand-primary to-brand-secondary text-white hover:shadow-xl shadow-brand-primary/25'
+              : 'bg-elevated text-text-muted cursor-not-allowed'
+          )}
         >
           {saving ? (
             <span className="flex items-center gap-2">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-              Saving...
+              <Spinner className="h-4 w-4 border-white border-t-transparent" />
+              {t('wizard.saving')}
             </span>
           ) : step === STEPS.length - 1 ? (
-            '🎉 Get Recommendations'
+            t('wizard.finish')
           ) : (
-            'Next'
+            t('wizard.next')
           )}
-        </button>
+        </motion.button>
       </div>
     </div>
   );

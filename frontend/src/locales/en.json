@@ -1,0 +1,459 @@
+{
+  "common": {
+    "add": "Add",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "loading": "Loading...",
+    "maybeLater": "Maybe later",
+    "save": "Save",
+    "saving": "Saving..."
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "explore": "Explore",
+    "recommendations": "Recommendations",
+    "browse": "Browse Programs",
+    "settings": "Settings",
+    "signIn": "Sign In",
+    "signOut": "Sign Out",
+    "toggleLanguage": "Toggle language",
+    "toggleTheme": "Toggle theme",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "darkMode": "Dark",
+    "lightMode": "Light",
+    "langEn": "EN",
+    "langFa": "FA",
+    "userFallback": "User"
+  },
+  "home": {
+    "heroTitleLine1": "Track Your University Applications.",
+    "heroTitleLine2": "Learn from Success Stories.",
+    "heroSubtitle": "Keep all your applications organized in one place. See how others with similar backgrounds got accepted to your dream schools.",
+    "cta": {
+      "start": "Start Tracking - It's Free",
+      "browse": "Browse Programs",
+      "dashboard": "Go to Dashboard",
+      "title": "Ready to get organized?",
+      "subtitle": "Join thousands of students tracking their applications with Ghadam."
+    },
+    "features": {
+      "title": "Everything you need to stay organized",
+      "track": {
+        "title": "Track Applications",
+        "description": "Keep track of all your programs, deadlines, and documents in one organized dashboard."
+      },
+      "learn": {
+        "title": "Learn from Others",
+        "description": "See success stories from students with similar backgrounds who got into your target schools."
+      },
+      "earn": {
+        "title": "Earn Ghadam Coins",
+        "description": "Share your journey after you get results and earn coins. Help future students succeed."
+      }
+    },
+    "how": {
+      "title": "How Ghadam Works",
+      "step1": {
+        "title": "Add your target programs",
+        "description": "Search our database or add custom programs. Track deadlines, documents, and status."
+      },
+      "step2": {
+        "title": "Discover success stories",
+        "description": "See how many students from your university got into each program. Use your Ghadam coins to view their full profiles."
+      },
+      "step3": {
+        "title": "Share your journey",
+        "description": "After you get your results, share your experience. Earn 70% of the coins when others view your profile."
+      }
+    },
+    "footer": "(c) {{year}} Ghadam. Built with care for students everywhere."
+  },
+  "dashboard": {
+    "title": "Your Dashboard",
+    "greeting": "Hey {{name}}!",
+    "subtitle": "Track and manage your applications",
+    "findPrograms": "Find Programs",
+    "addProgram": "Add Program",
+    "loadError": "Failed to load dashboard.",
+    "statusUpdated": "Status updated",
+    "statusUpdateError": "Failed to update status",
+    "confirmRemove": "Remove this program from your tracker?",
+    "programRemoved": "Program removed",
+    "programRemoveError": "Failed to remove program",
+    "stats": {
+      "totalPrograms": "Total Programs",
+      "accepted": "Accepted",
+      "pending": "Pending",
+      "deadlinesSoon": "Deadlines Soon",
+      "docsReady": "Docs Ready"
+    },
+    "programs": {
+      "title": "Your Programs",
+      "count_one": "{{count}} program",
+      "count_other": "{{count}} programs",
+      "emptyTitle": "No programs yet",
+      "emptySubtitle": "Start by finding programs that match your profile or add one manually",
+      "findMatching": "Find Matching Programs",
+      "addManual": "Add Manually"
+    },
+    "deadlines": {
+      "title": "Upcoming Deadlines"
+    },
+    "profileCard": {
+      "title": "Get Personalized Recommendations",
+      "subtitle": "Complete your profile to find programs that match your goals",
+      "cta": "Complete Profile"
+    },
+    "balance": {
+      "title": "Ghadam Balance",
+      "subtitle": "Use coins to unlock detailed profiles"
+    },
+    "tips": {
+      "title": "Tips",
+      "first": "Complete your profile to get AI-powered program matches",
+      "second": "Use the document checklist to stay organized",
+      "third": "Share your journey after results to earn coins"
+    }
+  },
+  "deadlines": {
+    "empty": "No upcoming deadlines in the next 30 days",
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "daysAway_one": "{{count}} day",
+    "daysAway_other": "{{count}} days"
+  },
+  "degree": {
+    "bachelor": "Bachelor",
+    "master": "Master",
+    "phd": "PhD",
+    "diploma": "Diploma",
+    "certificate": "Certificate"
+  },
+  "intake": {
+    "fall_2025": "Fall 2025",
+    "spring_2026": "Spring 2026",
+    "fall_2026": "Fall 2026",
+    "spring_2027": "Spring 2027",
+    "fall_2027": "Fall 2027"
+  },
+  "priority": {
+    "dream": "Dream",
+    "target": "Target",
+    "safety": "Safety"
+  },
+  "program": {
+    "matchScore": "{{score}}% match",
+    "unknown": "Unknown Program",
+    "unknownUniversity": "Unknown University",
+    "qsRank": "QS #{{rank}}",
+    "qsRanking": "QS World Ranking: #{{rank}}",
+    "daysLeft_one": "{{count}} day left",
+    "daysLeft_other": "{{count}} days left",
+    "documents": "Documents",
+    "remove": "Remove from tracker"
+  },
+  "programDetail": {
+    "back": "Back to Dashboard",
+    "loadError": "Failed to load program.",
+    "notFound": "Program not found.",
+    "statusLabel": "Application Status",
+    "statusUpdated": "Status updated",
+    "statusError": "Failed to update status",
+    "confirmRemove": "Remove this program from your tracker?",
+    "programRemoved": "Program removed",
+    "programRemoveError": "Failed to remove program",
+    "checklist": {
+      "title": "Document Checklist",
+      "placeholder": "Document name...",
+      "addCustom": "Add custom item"
+    },
+    "checklistUpdated": "Checklist updated",
+    "checklistError": "Failed to update checklist",
+    "itemAdded": "Item added",
+    "itemAddError": "Failed to add item",
+    "itemRemoved": "Item removed",
+    "itemRemoveError": "Failed to remove item",
+    "dates": {
+      "deadline": "Deadline",
+      "submitted": "Submitted",
+      "result": "Result Date",
+      "intake": "Intake",
+      "notSet": "Not set",
+      "notYet": "Not yet",
+      "pending": "Pending"
+    },
+    "notes": {
+      "title": "Notes",
+      "add": "Add Note",
+      "placeholder": "Add your main notes here... (supports markdown)",
+      "entryPlaceholder": "Write your note...",
+      "empty": "Click to add main notes...",
+      "emptyEntries": "No quick notes yet. Click \"Add Note\" to create one.",
+      "pin": "Pin",
+      "unpin": "Unpin"
+    },
+    "notesSaved": "Notes saved",
+    "notesError": "Failed to save notes",
+    "noteAdded": "Note added",
+    "noteAddError": "Failed to add note",
+    "notePinned": "Note pinned",
+    "noteUnpinned": "Note unpinned",
+    "notePinError": "Failed to update pin",
+    "noteRemoved": "Note removed",
+    "noteRemoveError": "Failed to remove note",
+    "share": {
+      "acceptedTitle": "Congratulations on your acceptance!",
+      "rejectedTitle": "Every journey teaches something valuable",
+      "subtitle": "Your experience can help future students. Share your journey to earn Ghadam coins and help others make better decisions.",
+      "cta": "Share My Journey (+150 coins)"
+    }
+  },
+  "explore": {
+    "title": "Explore Programs",
+    "subtitle": "Find your perfect program and add it to your tracker",
+    "searchPlaceholder": "Search programs...",
+    "filtersError": "Failed to load filters",
+    "searchError": "Failed to search",
+    "addError": "Failed to add program",
+    "added": "Program added",
+    "adding": "Adding...",
+    "addToTracker": "+ Add to Tracker",
+    "filters": {
+      "allCountries": "All Countries",
+      "allFields": "All Fields",
+      "allDegrees": "All Degrees",
+      "tuitionFree": "Tuition-free only"
+    },
+    "emptyTitle": "No programs found",
+    "emptySubtitle": "Try adjusting your filters",
+    "badges": {
+      "tuitionFree": "Tuition-free",
+      "perYear": "/year",
+      "deadline": "Due {{date}}",
+      "scholarships": "Scholarships"
+    },
+    "qsRank": "QS #{{rank}}"
+  },
+  "recommendations": {
+    "title": "Your Recommendations",
+    "subtitle_one": "{{count}} program matched to your profile",
+    "subtitle_other": "{{count}} programs matched to your profile",
+    "wizardTitle": "Find Your Perfect Program",
+    "wizardSubtitle": "Answer a few questions to get personalized recommendations",
+    "updatePreferences": "Update Preferences",
+    "match": "Match",
+    "profileError": "Failed to load profile",
+    "loadError": "Failed to load recommendations",
+    "trackError": "Failed to add program",
+    "tracked": "Added to tracker",
+    "alreadyTracked": "This program is already in your tracker",
+    "adding": "Adding...",
+    "addToTracker": "+ Add to Tracker",
+    "free": "Free",
+    "tuition": "{{amount}}/yr",
+    "scholarships": "Scholarships",
+    "loading": "Loading...",
+    "loadMore": "Load more ({{count}} remaining)",
+    "emptyTitle": "No programs found",
+    "emptySubtitle": "Try adjusting your preferences to see more results",
+    "budgetMax": "Max {{amount}}/year",
+    "bonusEarned": "You earned {{amount}} Ghadam coins."
+  },
+  "addProgram": {
+    "title": "Add Program to Tracker",
+    "subtitle": "Search our database or add a custom program",
+    "searchMode": "Search Programs",
+    "customMode": "Add Custom",
+    "findProgram": "Find Program",
+    "searchPlaceholder": "Search by program name or university...",
+    "searchError": "Search failed",
+    "startTyping": "Start typing to search for programs",
+    "change": "Change",
+    "noResults": "No results found. Try adding it manually.",
+    "switchToCustom": "Switch to Custom Add",
+    "customTitle": "Custom Program",
+    "programName": "Program Name *",
+    "programPlaceholder": "e.g., MSc Computer Science",
+    "universityName": "University Name *",
+    "universityPlaceholder": "e.g., Technical University of Munich",
+    "country": "Country",
+    "countryPlaceholder": "e.g., Germany",
+    "deadline": "Application Deadline",
+    "detailsTitle": "Application Details",
+    "priority": "Priority",
+    "intake": "Intake",
+    "intakeUnsure": "Not sure yet",
+    "notesLabel": "Notes (optional)",
+    "notesPlaceholder": "Any notes about this application...",
+    "cancel": "Cancel",
+    "submit": "Add to Tracker",
+    "adding": "Adding...",
+    "missingDetails": "Please select a program or fill in custom details",
+    "successToast": "Program added",
+    "successTitle": "Added {{name}}",
+    "successSubtitle": "Your tracker is ready for the next step.",
+    "nextSteps": "Next steps: add your first document or set a reminder.",
+    "goDashboard": "Go to Dashboard",
+    "setReminder": "Set a reminder",
+    "closeModal": "Close",
+    "error": "Failed to add program"
+  },
+  "auth": {
+    "welcomeTitle": "Welcome to Ghadam",
+    "welcomeSubtitle": "Track your university applications and learn from others' journeys",
+    "phoneLabel": "Phone Number",
+    "phonePlaceholder": "09123456789",
+    "sendCode": "Send Verification Code",
+    "sending": "Sending...",
+    "otpSent": "Verification code sent",
+    "sendOtpError": "Failed to send verification code",
+    "codeLabel": "Verification Code",
+    "codePlaceholder": "000000",
+    "sentTo": "We sent a code to {{phone}}",
+    "debugCode": "Debug mode: Your code is {{code}}",
+    "verify": "Verify & Continue",
+    "verifying": "Verifying...",
+    "invalidOtp": "Invalid code",
+    "signedIn": "Signed in",
+    "changePhone": "Change phone number",
+    "terms": "By signing in, you agree to our Terms of Service and Privacy Policy"
+  },
+  "onboarding": {
+    "welcomeTitle": "Welcome to Ghadam!",
+    "welcomeSubtitle": "Let's personalize your experience. What brings you here?",
+    "goals": {
+      "applying": {
+        "title": "I'm applying abroad",
+        "description": "Track your applications, deadlines, and documents in one place"
+      },
+      "applied": {
+        "title": "I've already applied or got accepted",
+        "description": "Share your journey to help others and earn Ghadam coins"
+      },
+      "browsing": {
+        "title": "I'm just exploring",
+        "description": "Browse programs and see what others have achieved"
+      }
+    },
+    "settingUp": "Setting up...",
+    "continue": "Continue",
+    "welcomeGift": "You received 30 Ghadam coins as a welcome gift.",
+    "profileTitle": "Complete Your Profile",
+    "profileSubtitle": "Help us find the perfect programs for you",
+    "completeTitle": "You're All Set!",
+    "completeSubtitle": "Your profile is complete. We'll now find programs that match your preferences.",
+    "bonusEarned": "You earned {{amount}} Ghadam coins for completing your profile.",
+    "viewRecommendations": "View My Recommendations",
+    "goDashboard": "Go to Dashboard",
+    "goalError": "Failed to save your goal",
+    "completeError": "Failed to complete onboarding"
+  },
+  "wizard": {
+    "steps": {
+      "fields": "Fields",
+      "countries": "Countries",
+      "budget": "Budget",
+      "timeline": "Timeline",
+      "extras": "Extras"
+    },
+    "fields": {
+      "title": "What do you want to study?",
+      "subtitle": "Select up to 3 fields of interest",
+      "searchPlaceholder": "Search fields..."
+    },
+    "countries": {
+      "title": "Where do you want to study?",
+      "subtitle": "Select your preferred countries",
+      "searchPlaceholder": "Search countries..."
+    },
+    "budget": {
+      "title": "What's your budget?",
+      "subtitle": "Select your annual tuition budget range",
+      "freeHint": "Many programs in Germany, Norway, etc.",
+      "scholarshipsTitle": "Prioritize programs with scholarships",
+      "scholarshipsSubtitle": "We'll highlight programs offering financial aid"
+    },
+    "timeline": {
+      "title": "When do you plan to start?",
+      "subtitle": "Select your target degree and intake",
+      "degreeLevel": "Degree Level",
+      "intake": "Target Intake"
+    },
+    "extras": {
+      "title": "Almost done!",
+      "subtitle": "Add optional details for better matches",
+      "language": "Teaching Language",
+      "gre": "GRE Score (optional)",
+      "gmat": "GMAT Score (optional)",
+      "gpa": "GPA (optional)",
+      "gpaPlaceholder": "Your GPA",
+      "gpaScale": "GPA Scale",
+      "gpaScales": {
+        "four": "4.0 Scale",
+        "twenty": "20 Scale (French)",
+        "hundred": "100 Scale",
+        "ten": "10 Scale (Indian)"
+      }
+    },
+    "showMore": "Show more",
+    "showLess": "Show less",
+    "back": "Back",
+    "next": "Next",
+    "skip": "Skip for now",
+    "saving": "Saving...",
+    "finish": "Get Recommendations",
+    "loadError": "Failed to load options. Please refresh.",
+    "saveError": "Failed to save profile"
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Manage your profile and preferences",
+    "profile": {
+      "title": "Profile",
+      "subtitle": "Update your public information",
+      "displayName": "Display name",
+      "displayNamePlaceholder": "Your name",
+      "email": "Email",
+      "emailPlaceholder": "you@example.com",
+      "phone": "Phone (read-only)",
+      "save": "Save changes"
+    },
+    "profileSaved": "Profile updated",
+    "profileSaveError": "Failed to update profile",
+    "appearance": {
+      "title": "Appearance",
+      "subtitle": "Choose a theme that fits your vibe",
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System"
+    },
+    "language": {
+      "title": "Language",
+      "subtitle": "Choose your language",
+      "english": "English",
+      "persian": "Persian"
+    }
+  },
+  "notes": {
+    "categories": {
+      "important": "Important",
+      "contact": "Contact",
+      "link": "Link",
+      "reminder": "Reminder",
+      "general": "General"
+    }
+  },
+  "status": {
+    "researching": "Researching",
+    "preparing": "Preparing",
+    "submitted": "Submitted",
+    "underReview": "Under Review",
+    "interview": "Interview",
+    "waitlisted": "Waitlisted",
+    "accepted": "Accepted",
+    "rejected": "Rejected",
+    "withdrawn": "Withdrawn",
+    "deferred": "Deferred"
+  }
+}

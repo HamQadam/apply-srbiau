@@ -23,8 +23,7 @@ log = logging.getLogger("crawler.db")
 
 
 def _now_utc() -> datetime:
-    return datetime.now(timezone.utc)
-
+    return datetime.utcnow()
 
 def _norm(s: str) -> str:
     """Normalize string for comparison."""
@@ -369,7 +368,7 @@ class PgStore:
         assert self.pool
         
         name = payload.get("name") or "Unknown"
-        degree_level = (payload.get("degree_level") or "MASTER").lower()
+        degree_level = (payload.get("degree_level") or "MASTER").upper()
         university_id = int(payload.get("university_id") or 0)
         
         # Extract source ID for exact matching
@@ -421,7 +420,7 @@ class PgStore:
             async with conn.transaction():
                 for p in items:
                     name = p.get("name") or "Unknown"
-                    degree_level = (p.get("degree_level") or "MASTER").lower()
+                    degree_level = (p.get("degree_level") or "MASTER").upper()
                     university_id = int(p.get("university_id") or 0)
                     
                     # Extract source ID

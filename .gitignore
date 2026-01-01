@@ -10,3 +10,8 @@ wheels/
 .venv
 .env
 
+frontend/node_modules/*
+crawlers/refine/Phi-3-mini-4k-instruct-q4.gguf
+.gitignore
+..gitignore.swp
+crawlers/refine/wget-log

@@ -1,0 +1,459 @@
+{
+  "common": {
+    "add": "افزودن",
+    "cancel": "انصراف",
+    "delete": "حذف",
+    "loading": "در حال بارگذاری...",
+    "maybeLater": "بعدا",
+    "save": "ذخیره",
+    "saving": "در حال ذخیره..."
+  },
+  "nav": {
+    "dashboard": "داشبورد",
+    "explore": "کاوش",
+    "recommendations": "پیشنهادها",
+    "browse": "مرور برنامه ها",
+    "settings": "تنظیمات",
+    "signIn": "ورود",
+    "signOut": "خروج",
+    "toggleLanguage": "تغییر زبان",
+    "toggleTheme": "تغییر تم",
+    "openMenu": "باز کردن منو",
+    "closeMenu": "بستن منو",
+    "darkMode": "تیره",
+    "lightMode": "روشن",
+    "langEn": "EN",
+    "langFa": "FA",
+    "userFallback": "کاربر"
+  },
+  "home": {
+    "heroTitleLine1": "پیگیری درخواست های دانشگاهی.",
+    "heroTitleLine2": "یادگیری از تجربه های موفق.",
+    "heroSubtitle": "همه درخواست هایت را یک جا منظم کن و ببین دانشجویان مشابه تو چطور پذیرفته شده اند.",
+    "cta": {
+      "start": "شروع رایگان پیگیری",
+      "browse": "مرور برنامه ها",
+      "dashboard": "رفتن به داشبورد",
+      "title": "آماده ای منظم تر باشی؟",
+      "subtitle": "هزاران دانشجو با گام درخواست هایشان را پیگیری می کنند."
+    },
+    "features": {
+      "title": "هرچه برای نظم نیاز داری",
+      "track": {
+        "title": "پیگیری درخواست ها",
+        "description": "همه برنامه ها، ددلاین ها و مدارک را در یک داشبورد نگه دار."
+      },
+      "learn": {
+        "title": "یادگیری از دیگران",
+        "description": "داستان های موفقیت دانشجویان مشابه را ببین."
+      },
+      "earn": {
+        "title": "کسب سکه های گام",
+        "description": "بعد از نتیجه، تجربه ات را به اشتراک بگذار و سکه بگیر."
+      }
+    },
+    "how": {
+      "title": "گام چطور کار می کند",
+      "step1": {
+        "title": "برنامه های هدف را اضافه کن",
+        "description": "در پایگاه جستجو کن یا برنامه سفارشی اضافه کن. ددلاین و وضعیت را پیگیری کن."
+      },
+      "step2": {
+        "title": "موفقیت ها را کشف کن",
+        "description": "ببین چند نفر از دانشگاه تو پذیرفته شده اند. با سکه های گام پروفایل کامل را ببین."
+      },
+      "step3": {
+        "title": "تجربه ات را به اشتراک بگذار",
+        "description": "بعد از نتیجه، تجربه ات را منتشر کن و از بازدیدها سهم سکه بگیر."
+      }
+    },
+    "footer": "(c) {{year}} گام. ساخته شده برای دانشجویان."
+  },
+  "dashboard": {
+    "title": "داشبورد شما",
+    "greeting": "سلام {{name}}!",
+    "subtitle": "درخواست هایت را پیگیری و مدیریت کن",
+    "findPrograms": "یافتن برنامه ها",
+    "addProgram": "افزودن برنامه",
+    "loadError": "بارگذاری داشبورد ناموفق بود.",
+    "statusUpdated": "وضعیت به روزرسانی شد",
+    "statusUpdateError": "به روزرسانی وضعیت ناموفق بود",
+    "confirmRemove": "این برنامه از لیست شما حذف شود؟",
+    "programRemoved": "برنامه حذف شد",
+    "programRemoveError": "حذف برنامه ناموفق بود",
+    "stats": {
+      "totalPrograms": "کل برنامه ها",
+      "accepted": "پذیرفته شده",
+      "pending": "در انتظار",
+      "deadlinesSoon": "ددلاین های نزدیک",
+      "docsReady": "مدارک آماده"
+    },
+    "programs": {
+      "title": "برنامه های شما",
+      "count_one": "{{count}} برنامه",
+      "count_other": "{{count}} برنامه",
+      "emptyTitle": "هنوز برنامه ای اضافه نکرده ای",
+      "emptySubtitle": "با پیشنهادها شروع کن یا برنامه ای را دستی اضافه کن",
+      "findMatching": "یافتن برنامه های پیشنهادی",
+      "addManual": "افزودن دستی"
+    },
+    "deadlines": {
+      "title": "ددلاین های نزدیک"
+    },
+    "profileCard": {
+      "title": "پیشنهادهای شخصی سازی شده",
+      "subtitle": "پروفایل را کامل کن تا پیشنهادهای دقیق تری بگیری",
+      "cta": "تکمیل پروفایل"
+    },
+    "balance": {
+      "title": "موجودی گام",
+      "subtitle": "از سکه ها برای باز کردن پروفایل های کامل استفاده کن"
+    },
+    "tips": {
+      "title": "نکات",
+      "first": "پروفایل را کامل کن تا پیشنهادهای هوشمند بگیری",
+      "second": "چک لیست مدارک را برای نظم استفاده کن",
+      "third": "بعد از نتیجه تجربه ات را منتشر کن و سکه بگیر"
+    }
+  },
+  "deadlines": {
+    "empty": "در ۳۰ روز آینده ددلاینی نداری",
+    "today": "امروز",
+    "tomorrow": "فردا",
+    "daysAway_one": "{{count}} روز",
+    "daysAway_other": "{{count}} روز"
+  },
+  "degree": {
+    "bachelor": "کارشناسی",
+    "master": "کارشناسی ارشد",
+    "phd": "دکتری",
+    "diploma": "دیپلم",
+    "certificate": "گواهی"
+  },
+  "intake": {
+    "fall_2025": "پاییز ۲۰۲۵",
+    "spring_2026": "بهار ۲۰۲۶",
+    "fall_2026": "پاییز ۲۰۲۶",
+    "spring_2027": "بهار ۲۰۲۷",
+    "fall_2027": "پاییز ۲۰۲۷"
+  },
+  "priority": {
+    "dream": "رویایی",
+    "target": "هدف",
+    "safety": "پشتیبان"
+  },
+  "program": {
+    "matchScore": "{{score}}٪ تطابق",
+    "unknown": "برنامه نامشخص",
+    "unknownUniversity": "دانشگاه نامشخص",
+    "qsRank": "QS #{{rank}}",
+    "qsRanking": "رتبه جهانی QS: #{{rank}}",
+    "daysLeft_one": "{{count}} روز مانده",
+    "daysLeft_other": "{{count}} روز مانده",
+    "documents": "مدارک",
+    "remove": "حذف از پیگیری"
+  },
+  "programDetail": {
+    "back": "بازگشت به داشبورد",
+    "loadError": "بارگذاری برنامه ناموفق بود.",
+    "notFound": "برنامه پیدا نشد.",
+    "statusLabel": "وضعیت درخواست",
+    "statusUpdated": "وضعیت به روزرسانی شد",
+    "statusError": "به روزرسانی وضعیت ناموفق بود",
+    "confirmRemove": "این برنامه حذف شود؟",
+    "programRemoved": "برنامه حذف شد",
+    "programRemoveError": "حذف برنامه ناموفق بود",
+    "checklist": {
+      "title": "چک لیست مدارک",
+      "placeholder": "نام مدرک...",
+      "addCustom": "افزودن مورد سفارشی"
+    },
+    "checklistUpdated": "چک لیست به روزرسانی شد",
+    "checklistError": "به روزرسانی چک لیست ناموفق بود",
+    "itemAdded": "مورد اضافه شد",
+    "itemAddError": "افزودن مورد ناموفق بود",
+    "itemRemoved": "مورد حذف شد",
+    "itemRemoveError": "حذف مورد ناموفق بود",
+    "dates": {
+      "deadline": "ددلاین",
+      "submitted": "ارسال شده",
+      "result": "نتیجه",
+      "intake": "ورودی",
+      "notSet": "تنظیم نشده",
+      "notYet": "هنوز نه",
+      "pending": "در انتظار"
+    },
+    "notes": {
+      "title": "یادداشت ها",
+      "add": "افزودن یادداشت",
+      "placeholder": "یادداشت های اصلی را اینجا بنویسید... (پشتیبانی از مارک داون)",
+      "entryPlaceholder": "یادداشت جدید...",
+      "empty": "برای افزودن یادداشت اصلی کلیک کنید...",
+      "emptyEntries": "هنوز یادداشت کوتاهی ندارید. برای افزودن روی «افزودن یادداشت» بزنید.",
+      "pin": "پین",
+      "unpin": "برداشتن پین"
+    },
+    "notesSaved": "یادداشت ذخیره شد",
+    "notesError": "ذخیره یادداشت ناموفق بود",
+    "noteAdded": "یادداشت اضافه شد",
+    "noteAddError": "افزودن یادداشت ناموفق بود",
+    "notePinned": "یادداشت پین شد",
+    "noteUnpinned": "پین برداشته شد",
+    "notePinError": "به روزرسانی پین ناموفق بود",
+    "noteRemoved": "یادداشت حذف شد",
+    "noteRemoveError": "حذف یادداشت ناموفق بود",
+    "share": {
+      "acceptedTitle": "قبولی مبارک!",
+      "rejectedTitle": "هر مسیر، درس های ارزشمند دارد",
+      "subtitle": "تجربه ات می تواند به دانشجویان آینده کمک کند. با اشتراک گذاری تجربه، سکه بگیر.",
+      "cta": "اشتراک تجربه (+۱۵۰ سکه)"
+    }
+  },
+  "explore": {
+    "title": "کاوش برنامه ها",
+    "subtitle": "برنامه مناسب خود را پیدا کن و به پیگیری اضافه کن",
+    "searchPlaceholder": "جستجوی برنامه...",
+    "filtersError": "بارگذاری فیلترها ناموفق بود",
+    "searchError": "جستجو ناموفق بود",
+    "addError": "افزودن برنامه ناموفق بود",
+    "added": "برنامه اضافه شد",
+    "adding": "در حال افزودن...",
+    "addToTracker": "+ افزودن به پیگیری",
+    "filters": {
+      "allCountries": "همه کشورها",
+      "allFields": "همه رشته ها",
+      "allDegrees": "همه مقاطع",
+      "tuitionFree": "فقط بدون شهریه"
+    },
+    "emptyTitle": "برنامه ای پیدا نشد",
+    "emptySubtitle": "فیلترها را تغییر دهید",
+    "badges": {
+      "tuitionFree": "بدون شهریه",
+      "perYear": "/سال",
+      "deadline": "ددلاین {{date}}",
+      "scholarships": "بورسیه"
+    },
+    "qsRank": "QS #{{rank}}"
+  },
+  "recommendations": {
+    "title": "پیشنهادهای شما",
+    "subtitle_one": "{{count}} برنامه مطابق پروفایل شما",
+    "subtitle_other": "{{count}} برنامه مطابق پروفایل شما",
+    "wizardTitle": "بهترین برنامه را پیدا کن",
+    "wizardSubtitle": "چند سوال کوتاه برای پیشنهادهای شخصی سازی شده",
+    "updatePreferences": "به روزرسانی ترجیحات",
+    "match": "تطابق",
+    "profileError": "بارگذاری پروفایل ناموفق بود",
+    "loadError": "بارگذاری پیشنهادها ناموفق بود",
+    "trackError": "افزودن برنامه ناموفق بود",
+    "tracked": "به پیگیری اضافه شد",
+    "alreadyTracked": "این برنامه قبلا در پیگیری شماست",
+    "adding": "در حال افزودن...",
+    "addToTracker": "+ افزودن به پیگیری",
+    "free": "رایگان",
+    "tuition": "{{amount}}/سال",
+    "scholarships": "بورسیه",
+    "loading": "در حال بارگذاری...",
+    "loadMore": "بیشتر ({{count}} باقی مانده)",
+    "emptyTitle": "برنامه ای پیدا نشد",
+    "emptySubtitle": "ترجیحات را تنظیم کن تا نتایج بیشتری ببینی",
+    "budgetMax": "حداکثر {{amount}} در سال",
+    "bonusEarned": "شما {{amount}} سکه گام دریافت کردید."
+  },
+  "addProgram": {
+    "title": "افزودن برنامه به پیگیری",
+    "subtitle": "جستجو در پایگاه یا افزودن برنامه سفارشی",
+    "searchMode": "جستجوی برنامه ها",
+    "customMode": "افزودن سفارشی",
+    "findProgram": "یافتن برنامه",
+    "searchPlaceholder": "جستجو بر اساس نام برنامه یا دانشگاه...",
+    "searchError": "جستجو ناموفق بود",
+    "startTyping": "برای جستجو تایپ کنید",
+    "change": "تغییر",
+    "noResults": "نتیجه ای نبود. می توانید دستی اضافه کنید.",
+    "switchToCustom": "افزودن دستی",
+    "customTitle": "برنامه سفارشی",
+    "programName": "نام برنامه *",
+    "programPlaceholder": "مثلا MSc Computer Science",
+    "universityName": "نام دانشگاه *",
+    "universityPlaceholder": "مثلا Technical University of Munich",
+    "country": "کشور",
+    "countryPlaceholder": "مثلا آلمان",
+    "deadline": "ددلاین درخواست",
+    "detailsTitle": "جزئیات درخواست",
+    "priority": "اولویت",
+    "intake": "ورودی",
+    "intakeUnsure": "هنوز مطمئن نیستم",
+    "notesLabel": "یادداشت ها (اختیاری)",
+    "notesPlaceholder": "یادداشت درباره این درخواست...",
+    "cancel": "انصراف",
+    "submit": "افزودن به پیگیری",
+    "adding": "در حال افزودن...",
+    "missingDetails": "لطفا برنامه ای را انتخاب کنید یا اطلاعات سفارشی را کامل کنید",
+    "successToast": "برنامه اضافه شد",
+    "successTitle": "{{name}} اضافه شد",
+    "successSubtitle": "گام بعدی آماده است.",
+    "nextSteps": "گام بعدی: اولین مدرک را اضافه کن یا یادآور تنظیم کن.",
+    "goDashboard": "رفتن به داشبورد",
+    "setReminder": "تنظیم یادآور",
+    "closeModal": "بستن",
+    "error": "افزودن برنامه ناموفق بود"
+  },
+  "auth": {
+    "welcomeTitle": "به گام خوش آمدی",
+    "welcomeSubtitle": "درخواست هایت را پیگیری کن و از تجربه دیگران یاد بگیر",
+    "phoneLabel": "شماره تلفن",
+    "phonePlaceholder": "09123456789",
+    "sendCode": "ارسال کد تایید",
+    "sending": "در حال ارسال...",
+    "otpSent": "کد تایید ارسال شد",
+    "sendOtpError": "ارسال کد ناموفق بود",
+    "codeLabel": "کد تایید",
+    "codePlaceholder": "000000",
+    "sentTo": "کد به {{phone}} ارسال شد",
+    "debugCode": "حالت دیباگ: کد شما {{code}} است",
+    "verify": "تایید و ادامه",
+    "verifying": "در حال تایید...",
+    "invalidOtp": "کد نامعتبر است",
+    "signedIn": "ورود موفق",
+    "changePhone": "تغییر شماره",
+    "terms": "با ورود، با شرایط خدمات و سیاست حریم خصوصی موافقت می کنید"
+  },
+  "onboarding": {
+    "welcomeTitle": "به گام خوش آمدی!",
+    "welcomeSubtitle": "بیایید تجربه ات را شخصی سازی کنیم. هدف تو چیست؟",
+    "goals": {
+      "applying": {
+        "title": "برای تحصیل خارج اقدام می کنم",
+        "description": "درخواست ها، ددلاین ها و مدارک را یک جا پیگیری کن"
+      },
+      "applied": {
+        "title": "قبلا اقدام کرده ام یا پذیرفته شده ام",
+        "description": "تجربه ات را به اشتراک بگذار و سکه گام بگیر"
+      },
+      "browsing": {
+        "title": "فقط در حال بررسی هستم",
+        "description": "برنامه ها را ببین و از نتایج دیگران یاد بگیر"
+      }
+    },
+    "settingUp": "در حال آماده سازی...",
+    "continue": "ادامه",
+    "welcomeGift": "۳۰ سکه گام به عنوان هدیه خوش آمدگویی دریافت کردید.",
+    "profileTitle": "تکمیل پروفایل",
+    "profileSubtitle": "کمک کن تا بهترین برنامه ها را پیشنهاد دهیم",
+    "completeTitle": "همه چیز آماده است!",
+    "completeSubtitle": "پروفایل شما کامل شد. حالا برنامه های مناسب را پیدا می کنیم.",
+    "bonusEarned": "با تکمیل پروفایل، {{amount}} سکه گام گرفتید.",
+    "viewRecommendations": "مشاهده پیشنهادها",
+    "goDashboard": "رفتن به داشبورد",
+    "goalError": "ثبت هدف ناموفق بود",
+    "completeError": "تکمیل آنبوردینگ ناموفق بود"
+  },
+  "wizard": {
+    "steps": {
+      "fields": "رشته ها",
+      "countries": "کشورها",
+      "budget": "بودجه",
+      "timeline": "زمان بندی",
+      "extras": "جزئیات"
+    },
+    "fields": {
+      "title": "چه رشته ای می خواهی بخوانی؟",
+      "subtitle": "حداکثر ۳ رشته را انتخاب کن",
+      "searchPlaceholder": "جستجوی رشته..."
+    },
+    "countries": {
+      "title": "کجا می خواهی تحصیل کنی؟",
+      "subtitle": "کشورهای موردنظر را انتخاب کن",
+      "searchPlaceholder": "جستجوی کشور..."
+    },
+    "budget": {
+      "title": "بودجه ات چقدر است؟",
+      "subtitle": "بازه شهریه سالانه را انتخاب کن",
+      "freeHint": "برخی برنامه ها در آلمان، نروژ و ... رایگان اند.",
+      "scholarshipsTitle": "اولویت به برنامه های دارای بورسیه",
+      "scholarshipsSubtitle": "برنامه های دارای کمک مالی را برجسته می کنیم"
+    },
+    "timeline": {
+      "title": "چه زمانی می خواهی شروع کنی؟",
+      "subtitle": "مقطع و ورودی را انتخاب کن",
+      "degreeLevel": "مقطع",
+      "intake": "ورودی"
+    },
+    "extras": {
+      "title": "تقریبا تمام شد!",
+      "subtitle": "جزئیات اختیاری برای پیشنهاد بهتر",
+      "language": "زبان تدریس",
+      "gre": "نمره GRE (اختیاری)",
+      "gmat": "نمره GMAT (اختیاری)",
+      "gpa": "معدل (اختیاری)",
+      "gpaPlaceholder": "معدل شما",
+      "gpaScale": "مقیاس معدل",
+      "gpaScales": {
+        "four": "مقیاس ۴.۰",
+        "twenty": "مقیاس ۲۰ (فرانسه)",
+        "hundred": "مقیاس ۱۰۰",
+        "ten": "مقیاس ۱۰ (هند)"
+      }
+    },
+    "showMore": "نمایش بیشتر",
+    "showLess": "نمایش کمتر",
+    "back": "بازگشت",
+    "next": "بعدی",
+    "skip": "فعلا رد کن",
+    "saving": "در حال ذخیره...",
+    "finish": "دریافت پیشنهادها",
+    "loadError": "بارگذاری گزینه ها ناموفق بود. لطفا صفحه را تازه کنید.",
+    "saveError": "ذخیره پروفایل ناموفق بود"
+  },
+  "settings": {
+    "title": "تنظیمات",
+    "subtitle": "مدیریت پروفایل و ترجیحات",
+    "profile": {
+      "title": "پروفایل",
+      "subtitle": "اطلاعات عمومی خود را به روزرسانی کنید",
+      "displayName": "نام نمایشی",
+      "displayNamePlaceholder": "نام شما",
+      "email": "ایمیل",
+      "emailPlaceholder": "you@example.com",
+      "phone": "شماره تلفن (فقط خواندنی)",
+      "save": "ذخیره تغییرات"
+    },
+    "profileSaved": "پروفایل به روزرسانی شد",
+    "profileSaveError": "به روزرسانی پروفایل ناموفق بود",
+    "appearance": {
+      "title": "نمایش",
+      "subtitle": "تم موردنظر را انتخاب کنید",
+      "light": "روشن",
+      "dark": "تیره",
+      "system": "سیستم"
+    },
+    "language": {
+      "title": "زبان",
+      "subtitle": "زبان خود را انتخاب کنید",
+      "english": "English",
+      "persian": "فارسی"
+    }
+  },
+  "notes": {
+    "categories": {
+      "important": "مهم",
+      "contact": "تماس",
+      "link": "لینک",
+      "reminder": "یادآور",
+      "general": "عمومی"
+    }
+  },
+  "status": {
+    "researching": "در حال تحقیق",
+    "preparing": "آماده سازی",
+    "submitted": "ارسال شده",
+    "underReview": "در حال بررسی",
+    "interview": "مصاحبه",
+    "waitlisted": "لیست انتظار",
+    "accepted": "پذیرفته شده",
+    "rejected": "رد شده",
+    "withdrawn": "انصراف",
+    "deferred": "تعویق"
+  }
+}

@@ -24,7 +24,7 @@ from tenacity import (
     retry_if_exception_type,
 )
 
-from ..base import BaseCrawler, CrawlResult, CrawlStatus, CrawlError
+from base import BaseCrawler, CrawlResult, CrawlStatus, CrawlError
 
 
 RETRYABLE = (httpx.TimeoutException, httpx.NetworkError, httpx.HTTPStatusError)

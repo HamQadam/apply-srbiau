@@ -195,12 +195,12 @@ export interface NoteEntry {
   updated_at: string;
 }
 
-export const NOTE_CATEGORIES: Record<NoteCategory, { label: string; icon: string; color: string }> = {
-  important: { label: 'Important', icon: '⚡', color: 'bg-red-100 text-red-700 border-red-200' },
-  contact: { label: 'Contact', icon: '👤', color: 'bg-blue-100 text-blue-700 border-blue-200' },
-  link: { label: 'Link', icon: '🔗', color: 'bg-purple-100 text-purple-700 border-purple-200' },
-  reminder: { label: 'Reminder', icon: '⏰', color: 'bg-amber-100 text-amber-700 border-amber-200' },
-  general: { label: 'General', icon: '📝', color: 'bg-gray-100 text-gray-700 border-gray-200' },
+export const NOTE_CATEGORIES: Record<NoteCategory, { labelKey: string; icon: string; color: string }> = {
+  important: { labelKey: 'notes.categories.important', icon: '⚡', color: 'bg-status-danger/10 text-status-danger border border-status-danger/30' },
+  contact: { labelKey: 'notes.categories.contact', icon: '👤', color: 'bg-status-info/10 text-status-info border border-status-info/30' },
+  link: { labelKey: 'notes.categories.link', icon: '🔗', color: 'bg-brand-secondary/10 text-brand-secondary border border-brand-secondary/30' },
+  reminder: { labelKey: 'notes.categories.reminder', icon: '⏰', color: 'bg-status-warning/10 text-status-warning border border-status-warning/30' },
+  general: { labelKey: 'notes.categories.general', icon: '📝', color: 'bg-elevated text-text-secondary border border-border' },
 };
 
 export type ApplicationStatus = 
@@ -279,47 +279,47 @@ export interface UpdateTrackedProgramRequest {
 
 // Display helpers
 export const STATUS_LABELS: Record<ApplicationStatus, string> = {
-  researching: 'Researching',
-  preparing: 'Preparing',
-  submitted: 'Submitted',
-  under_review: 'Under Review',
-  interview: 'Interview',
-  waitlisted: 'Waitlisted',
-  accepted: 'Accepted',
-  rejected: 'Rejected',
-  withdrawn: 'Withdrawn',
-  deferred: 'Deferred',
+  researching: 'status.researching',
+  preparing: 'status.preparing',
+  submitted: 'status.submitted',
+  under_review: 'status.underReview',
+  interview: 'status.interview',
+  waitlisted: 'status.waitlisted',
+  accepted: 'status.accepted',
+  rejected: 'status.rejected',
+  withdrawn: 'status.withdrawn',
+  deferred: 'status.deferred',
 };
 
 export const STATUS_COLORS: Record<ApplicationStatus, string> = {
-  researching: 'bg-slate-100 text-slate-700 border border-slate-200',
-  preparing: 'bg-blue-100 text-blue-700 border border-blue-200',
-  submitted: 'bg-violet-100 text-violet-700 border border-violet-200',
-  under_review: 'bg-amber-100 text-amber-700 border border-amber-200',
-  interview: 'bg-orange-100 text-orange-700 border border-orange-200',
-  waitlisted: 'bg-yellow-100 text-yellow-700 border border-yellow-200',
-  accepted: 'bg-emerald-100 text-emerald-700 border border-emerald-200',
-  rejected: 'bg-red-100 text-red-700 border border-red-200',
-  withdrawn: 'bg-gray-100 text-gray-500 border border-gray-200',
-  deferred: 'bg-indigo-100 text-indigo-700 border border-indigo-200',
+  researching: 'bg-elevated text-text-secondary border border-border',
+  preparing: 'bg-status-info/10 text-status-info border border-status-info/30',
+  submitted: 'bg-brand-secondary/10 text-brand-secondary border border-brand-secondary/30',
+  under_review: 'bg-status-warning/10 text-status-warning border border-status-warning/30',
+  interview: 'bg-status-warning/10 text-status-warning border border-status-warning/30',
+  waitlisted: 'bg-status-warning/10 text-status-warning border border-status-warning/30',
+  accepted: 'bg-status-success/10 text-status-success border border-status-success/30',
+  rejected: 'bg-status-danger/10 text-status-danger border border-status-danger/30',
+  withdrawn: 'bg-elevated text-text-muted border border-border',
+  deferred: 'bg-brand-primary/10 text-brand-primary border border-brand-primary/30',
 };
 
 export const PRIORITY_LABELS: Record<Priority, string> = {
-  dream: 'Dream',
-  target: 'Target',
-  safety: 'Safety',
+  dream: 'priority.dream',
+  target: 'priority.target',
+  safety: 'priority.safety',
 };
 
 export const PRIORITY_COLORS: Record<Priority, string> = {
-  dream: 'bg-gradient-to-r from-purple-500 to-pink-500 text-white',
-  target: 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white',
-  safety: 'bg-gradient-to-r from-green-500 to-emerald-500 text-white',
+  dream: 'bg-gradient-to-r from-brand-secondary to-brand-primary text-white',
+  target: 'bg-gradient-to-r from-brand-primary to-status-info text-white',
+  safety: 'bg-gradient-to-r from-status-success to-brand-accent text-white',
 };
 
 // Match score color helper
 export const getMatchScoreColor = (score: number): string => {
-  if (score >= 80) return 'text-emerald-600 bg-emerald-50';
-  if (score >= 60) return 'text-blue-600 bg-blue-50';
-  if (score >= 40) return 'text-amber-600 bg-amber-50';
-  return 'text-gray-600 bg-gray-50';
+  if (score >= 80) return 'text-status-success bg-status-success/10';
+  if (score >= 60) return 'text-status-info bg-status-info/10';
+  if (score >= 40) return 'text-status-warning bg-status-warning/10';
+  return 'text-text-secondary bg-elevated';
 };

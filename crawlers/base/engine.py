@@ -20,7 +20,7 @@ from typing import Any, TYPE_CHECKING
 if TYPE_CHECKING:
     from .crawler import BaseCrawler, CrawlResult, CrawlStats
 
-from ..db import PgStore
+from db import PgStore
 
 
 @dataclass

@@ -11,3 +11,9 @@ psql:
 	docker exec -it apply-db psql -U apply_user apply_db
 run:
 	cd deploy; docker compose up -d
+
+crawl-daad:
+	cd deploy; docker compose run --build --rm daad-crawler
+
+crawl-nl:
+	cd deploy; docker compose run --build --rm studyinnl-crawler

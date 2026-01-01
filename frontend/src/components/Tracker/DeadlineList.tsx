@@ -1,3 +1,7 @@
+import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
+import { cn } from '../../lib/cn';
+import { formatDate } from '../../lib/format';
 import type { DeadlineItem } from '../../types';
 
 interface DeadlineListProps {
@@ -5,52 +9,58 @@ interface DeadlineListProps {
 }
 
 export function DeadlineList({ deadlines }: DeadlineListProps) {
+  const { t, i18n } = useTranslation();
+
   if (deadlines.length === 0) {
     return (
-      <p className="text-sm text-gray-500 text-center py-4">
-        No upcoming deadlines in the next 30 days
+      <p className="text-sm text-text-muted text-center py-4">
+        {t('deadlines.empty')}
       </p>
     );
   }
   
   return (
-    <div className="space-y-3">
+    <motion.div
+      className="space-y-3"
+      initial="hidden"
+      animate="visible"
+      variants={{ visible: { transition: { staggerChildren: 0.08 } } }}
+    >
       {deadlines.map((deadline) => (
-        <div
+        <motion.div
           key={deadline.id}
-          className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0"
+          variants={{ hidden: { opacity: 0, y: 8 }, visible: { opacity: 1, y: 0 } }}
+          className="flex items-center justify-between py-2 border-b border-border last:border-0"
         >
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-gray-900 truncate">
+            <p className="text-sm font-medium text-text-primary truncate">
               {deadline.program_name}
             </p>
-            <p className="text-xs text-gray-500 truncate">
-              {deadline.university_name}
-            </p>
+            <p className="text-xs text-text-muted truncate">{deadline.university_name}</p>
           </div>
-          <div className="ml-4 text-right">
-            <p className={`text-sm font-medium ${
-              deadline.days_until <= 7
-                ? 'text-red-600'
-                : deadline.days_until <= 14
-                ? 'text-orange-600'
-                : 'text-gray-900'
-            }`}>
+          <div className="ms-4 text-end">
+            <p
+              className={cn(
+                'text-sm font-medium',
+                deadline.days_until <= 7
+                  ? 'text-status-danger'
+                  : deadline.days_until <= 14
+                  ? 'text-status-warning'
+                  : 'text-text-primary'
+              )}
+            >
               {deadline.days_until === 0
-                ? 'Today!'
+                ? t('deadlines.today')
                 : deadline.days_until === 1
-                ? 'Tomorrow'
-                : `${deadline.days_until} days`}
+                ? t('deadlines.tomorrow')
+                : t('deadlines.daysAway', { count: deadline.days_until })}
             </p>
-            <p className="text-xs text-gray-500">
-              {new Date(deadline.deadline).toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-              })}
+            <p className="text-xs text-text-muted">
+              {formatDate(deadline.deadline, i18n.language, { month: 'short', day: 'numeric' })}
             </p>
           </div>
-        </div>
+        </motion.div>
       ))}
-    </div>
+    </motion.div>
   );
 }

@@ -14,8 +14,8 @@ import httpx
 from aiolimiter import AsyncLimiter
 from tenacity import retry, wait_exponential_jitter, stop_after_attempt, retry_if_exception_type
 
-from ..base import BaseCrawler, CrawlResult, CrawlStatus
-from .transformers import DaadTransformer
+from base import BaseCrawler, CrawlResult, CrawlStatus
+#from .transformers import DaadTransformer
 
 
 RETRYABLE = (httpx.TimeoutException, httpx.NetworkError, httpx.HTTPStatusError)
@@ -399,4 +399,4 @@ class DaadTransformer:
 
 
 # Need to import CrawlError here to avoid circular import
-from ..base.crawler import CrawlError
+from base.crawler import CrawlError

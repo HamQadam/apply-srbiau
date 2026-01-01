@@ -1,27 +1,31 @@
+import { motion } from 'framer-motion';
 import { useState } from 'react';
+import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { ProfileWizard } from '../../components/Matching/ProfileWizard';
+import { PageTransition } from '../../components/Transitions/PageTransition';
 import type { UserGoal } from '../../types';
 
-const GOALS: Array<{ value: UserGoal; icon: string; title: string; description: string }> = [
+const GOALS: Array<{ value: UserGoal; icon: string; titleKey: string; descriptionKey: string }> = [
   {
     value: 'applying',
     icon: '🚀',
-    title: "I'm applying abroad",
-    description: 'Track your applications, deadlines, and documents in one place',
+    titleKey: 'onboarding.goals.applying.title',
+    descriptionKey: 'onboarding.goals.applying.description',
   },
   {
     value: 'applied',
     icon: '✅',
-    title: "I've already applied or got accepted",
-    description: 'Share your journey to help others and earn Ghadam coins',
+    titleKey: 'onboarding.goals.applied.title',
+    descriptionKey: 'onboarding.goals.applied.description',
   },
   {
     value: 'browsing',
     icon: '🔍',
-    title: "I'm just exploring",
-    description: 'Browse programs and see what others have achieved',
+    titleKey: 'onboarding.goals.browsing.title',
+    descriptionKey: 'onboarding.goals.browsing.description',
   },
 ];
 
@@ -30,6 +34,7 @@ type OnboardingStep = 'goal' | 'profile' | 'complete';
 export function OnboardingPage() {
   const navigate = useNavigate();
   const { user, setGoal, completeOnboarding } = useAuth();
+  const { t } = useTranslation();
   const [selectedGoal, setSelectedGoal] = useState<UserGoal | null>(user?.goal ?? null);
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<OnboardingStep>('goal');
@@ -56,6 +61,7 @@ export function OnboardingPage() {
       }
     } catch (err) {
       console.error('Failed to set goal:', err);
+      toast.error(t('onboarding.goalError'));
     } finally {
       setLoading(false);
     }
@@ -72,6 +78,7 @@ export function OnboardingPage() {
       navigate('/dashboard');
     } catch (err) {
       console.error('Failed to complete onboarding:', err);
+      toast.error(t('onboarding.completeError'));
     }
   };
   
@@ -81,73 +88,81 @@ export function OnboardingPage() {
       navigate('/recommendations');
     } catch (err) {
       console.error('Failed to complete onboarding:', err);
+      toast.error(t('onboarding.completeError'));
     }
   };
   
   // Step 1: Goal Selection
   if (step === 'goal') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50 py-12 px-4">
-        <div className="max-w-xl w-full">
+      <PageTransition>
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-brand-primary/10 via-background to-brand-secondary/10 py-12 px-4">
+          <div className="max-w-xl w-full">
           <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+            <div className="w-16 h-16 bg-gradient-to-br from-brand-primary to-brand-secondary rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
               <span className="text-3xl">👋</span>
             </div>
-            <h1 className="text-3xl font-bold text-gray-900">Welcome to Ghadam!</h1>
-            <p className="mt-2 text-gray-600">
-              Let's personalize your experience. What brings you here?
+            <h1 className="text-3xl font-bold text-text-primary">{t('onboarding.welcomeTitle')}</h1>
+            <p className="mt-2 text-text-muted">
+              {t('onboarding.welcomeSubtitle')}
             </p>
           </div>
           
           <div className="space-y-4 mb-8">
             {GOALS.map((goal) => (
-              <button
+              <motion.button
                 key={goal.value}
                 onClick={() => setSelectedGoal(goal.value)}
-                className={`w-full p-6 text-left rounded-2xl border-2 transition-all ${
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.98 }}
+                className={`w-full p-6 text-start rounded-2xl border-2 transition-all ${
                   selectedGoal === goal.value
-                    ? 'border-indigo-500 bg-indigo-50 shadow-md'
-                    : 'border-gray-200 bg-white hover:border-indigo-200 hover:shadow-sm'
+                    ? 'border-brand-primary bg-brand-primary/10 shadow-md'
+                    : 'border-border bg-surface hover:border-brand-primary/30 hover:shadow-sm'
                 }`}
               >
                 <div className="flex items-start gap-4">
                   <span className="text-3xl">{goal.icon}</span>
                   <div>
-                    <h3 className="font-semibold text-gray-900">{goal.title}</h3>
-                    <p className="mt-1 text-sm text-gray-600">{goal.description}</p>
+                    <h3 className="font-semibold text-text-primary">{t(goal.titleKey)}</h3>
+                    <p className="mt-1 text-sm text-text-muted">{t(goal.descriptionKey)}</p>
                   </div>
                 </div>
-              </button>
+              </motion.button>
             ))}
           </div>
           
-          <button
+          <motion.button
             onClick={handleGoalContinue}
             disabled={!selectedGoal || loading}
-            className="w-full py-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-medium rounded-xl hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.97 }}
+            className="w-full py-3.5 bg-gradient-to-r from-brand-primary to-brand-secondary text-white font-medium rounded-xl hover:from-brand-secondary hover:to-brand-primary disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md"
           >
-            {loading ? 'Setting up...' : 'Continue'}
-          </button>
+            {loading ? t('onboarding.settingUp') : t('onboarding.continue')}
+          </motion.button>
           
           <div className="mt-6 text-center">
-            <p className="text-sm text-gray-500">
-              You received <span className="font-medium text-amber-600">30 Ghadam coins</span> as a welcome gift! 🪙
+            <p className="text-sm text-text-muted">
+              {t('onboarding.welcomeGift')}
             </p>
           </div>
         </div>
       </div>
+      </PageTransition>
     );
   }
   
   // Step 2: Profile Wizard (for applicants)
   if (step === 'profile') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 py-8 px-4">
-        <div className="max-w-2xl mx-auto">
+      <PageTransition>
+        <div className="min-h-screen bg-gradient-to-br from-brand-primary/10 via-background to-brand-secondary/10 py-8 px-4">
+          <div className="max-w-2xl mx-auto">
           <div className="text-center mb-6">
-            <h1 className="text-2xl font-bold text-gray-900">Complete Your Profile</h1>
-            <p className="mt-1 text-gray-600">
-              Help us find the perfect programs for you
+            <h1 className="text-2xl font-bold text-text-primary">{t('onboarding.profileTitle')}</h1>
+            <p className="mt-1 text-text-muted">
+              {t('onboarding.profileSubtitle')}
             </p>
           </div>
           
@@ -156,47 +171,54 @@ export function OnboardingPage() {
             onSkip={handleSkipProfile}
           />
         </div>
-      </div>
+        </div>
+      </PageTransition>
     );
   }
   
   // Step 3: Completion
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50 py-12 px-4">
-      <div className="max-w-md w-full text-center">
-        <div className="w-20 h-20 bg-gradient-to-br from-emerald-500 to-green-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+    <PageTransition>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-brand-primary/10 via-background to-brand-secondary/10 py-12 px-4">
+        <div className="max-w-md w-full text-center">
+        <div className="w-20 h-20 bg-gradient-to-br from-status-success to-brand-accent rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
           <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
           </svg>
         </div>
         
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">You're All Set!</h1>
-        <p className="text-gray-600 mb-6">
-          Your profile is complete. We'll now find programs that match your preferences.
+        <h1 className="text-3xl font-bold text-text-primary mb-2">{t('onboarding.completeTitle')}</h1>
+        <p className="text-text-muted mb-6">
+          {t('onboarding.completeSubtitle')}
         </p>
         
         {bonusEarned > 0 && (
-          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-6">
-            <p className="text-amber-800">
-              You earned <span className="font-bold text-amber-600">{bonusEarned} Ghadam coins</span> for completing your profile! 🎉
+          <div className="bg-brand-accent/10 border border-brand-accent/30 rounded-2xl p-4 mb-6">
+            <p className="text-brand-accent">
+              {t('onboarding.bonusEarned', { amount: bonusEarned })}
             </p>
           </div>
         )}
         
-        <button
+        <motion.button
           onClick={handleFinish}
-          className="w-full py-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-medium rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all shadow-md"
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.97 }}
+          className="w-full py-3.5 bg-gradient-to-r from-brand-primary to-brand-secondary text-white font-medium rounded-xl hover:from-brand-secondary hover:to-brand-primary transition-all shadow-md"
         >
-          View My Recommendations
-        </button>
+          {t('onboarding.viewRecommendations')}
+        </motion.button>
         
-        <button
+        <motion.button
           onClick={() => navigate('/dashboard')}
-          className="w-full mt-3 py-3 text-gray-600 font-medium hover:text-gray-900 transition-colors"
+          whileHover={{ scale: 1.01 }}
+          whileTap={{ scale: 0.98 }}
+          className="w-full mt-3 py-3 text-text-muted font-medium hover:text-text-primary transition-colors"
         >
-          Go to Dashboard
-        </button>
+          {t('onboarding.goDashboard')}
+        </motion.button>
       </div>
-    </div>
+      </div>
+    </PageTransition>
   );
 }
