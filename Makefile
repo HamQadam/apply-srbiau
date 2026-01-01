@@ -17,3 +17,10 @@ crawl-daad:
 
 crawl-nl:
 	cd deploy; docker compose run --build --rm studyinnl-crawler
+
+up-front:
+	cd deploy; docker compose up frontend -d --build
+
+
+up-back:
+	cd deploy; docker compose up api -d --build
