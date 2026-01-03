@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     sms_ir_api_key: str | None = None
     sms_ir_template_id: int | None = None
 
+    google_client_id: str | None = None
+    google_client_secret: str | None = None
+
     @field_validator("debug_otp", mode="before")
     @classmethod
     def parse_debug_otp(cls, v):

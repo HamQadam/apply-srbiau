@@ -9,6 +9,11 @@ if TYPE_CHECKING:
     from .tracked_program import TrackedProgram
     from .ghadam import GhadamTransaction
 
+class AuthProvider(str, Enum):
+    PHONE = "phone"
+    GOOGLE = "google"
+
+
 
 class UserGoal(str, Enum):
     """What brought the user here - determines their flow."""
@@ -28,7 +33,7 @@ class OnboardingStep(str, Enum):
 
 
 class UserBase(SQLModel):
-    phone: str = Field(unique=True, index=True, max_length=20)
+    phone: Optional[str] = Field(default=None, unique=True, index=True, max_length=20)
     display_name: Optional[str] = Field(default=None, max_length=100)
     email: Optional[str] = Field(default=None, max_length=200)
     
@@ -38,6 +43,16 @@ class UserBase(SQLModel):
     field_of_study: Optional[str] = Field(default=None, max_length=200)
     graduation_year: Optional[int] = Field(default=None)
     
+
+    auth_provider: AuthProvider = Field(
+        default=AuthProvider.PHONE,
+        sa_column=Column(SAEnum(AuthProvider))
+    )
+
+    google_sub: Optional[str] = Field(default=None, unique=True, index=True, max_length=50)
+    picture_url: Optional[str] = Field(default=None, max_length=500)
+    email_verified: Optional[bool] = Field(default=None)
+
     # Onboarding
     goal: Optional[UserGoal] = Field(default=None, sa_column=Column(SAEnum(UserGoal)))
     onboarding_step: OnboardingStep = Field(

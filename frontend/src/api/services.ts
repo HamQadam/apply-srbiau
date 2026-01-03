@@ -27,16 +27,23 @@ import type {
 export const authApi = {
   requestOTP: (phone: string) =>
     api.post<{ message: string; debug_code?: string }>('/auth/request-otp', { phone }),
-  
+
   verifyOTP: (phone: string, code: string) =>
     api.post<AuthResponse>('/auth/verify-otp', { phone, code }),
-  
+
+  googleExchange: (code: string, redirect_uri: string) =>
+    api.post<AuthResponse>(
+      '/auth/google/exchange',
+      { code, redirect_uri },
+      { headers: { 'X-Requested-With': 'XMLHttpRequest' } }
+    ),
+
   getMe: () => api.get<User>('/auth/me'),
-  
+
   updateMe: (data: Partial<User>) => api.patch<User>('/auth/me', data),
-  
+
   setGoal: (goal: UserGoal) => api.post<User>('/auth/onboarding', { goal }),
-  
+
   completeOnboarding: () => api.post<User>('/auth/onboarding/complete'),
 };
 

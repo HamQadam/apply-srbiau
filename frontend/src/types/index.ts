@@ -1,7 +1,7 @@
 // User & Auth
 export interface User {
   id: number;
-  phone: string;
+  phone: string | null;
   display_name: string | null;
   email: string | null;
   origin_country: string | null;
@@ -15,6 +15,9 @@ export interface User {
   matching_profile: MatchingProfile | null;
   matching_profile_completed: boolean;
   created_at: string;
+  auth_provider?: 'phone' | 'google';
+  picture_url?: string | null;
+  email_verified?: boolean | null;
 }
 
 export type UserGoal = 'applying' | 'applied' | 'browsing';

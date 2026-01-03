@@ -8,6 +8,7 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (phone: string, code: string) => Promise<AuthResponse>;
+  loginWithGoogle: (code: string) => Promise<AuthResponse>;
   logout: () => void;
   refreshUser: () => Promise<void>;
   setGoal: (goal: UserGoal) => Promise<void>;
@@ -19,7 +20,12 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-
+  const loginWithGoogle = async (code: string): Promise<AuthResponse> => {
+    const response = await authApi.googleExchange(code, window.location.origin);
+    setToken(response.token);
+    setUser(response.user);
+    return response;
+  };
   useEffect(() => {
     // Check for existing session
     const token = localStorage.getItem('token');

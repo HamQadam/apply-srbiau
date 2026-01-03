@@ -3,6 +3,9 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlmodel import Session, select
+from app.services.google_oauth import exchange_code_for_tokens, verify_google_id_token
+from app.services.google_oauth import get_or_create_user_from_google  # if you placed it there
+from app.services.auth import create_access_token
 
 from app.database import get_session
 from app.models import (
@@ -179,3 +182,46 @@ def complete_onboarding(
     session.refresh(current_user)
     
     return UserRead.model_validate(current_user)
+
+class GoogleExchangeRequest(BaseModel):
+    code: str
+    redirect_uri: str
+
+class GoogleTokenRequest(BaseModel):
+    id_token: str
+
+@router.post("/google/exchange", response_model=VerifyOTPResponse)
+async def google_exchange(
+    data: GoogleExchangeRequest,
+    session: Session = Depends(get_session),
+):
+    tokens = await exchange_code_for_tokens(data.code, data.redirect_uri)
+    idt = tokens.get("id_token")
+    if not idt:
+        raise HTTPException(status_code=400, detail="Google did not return id_token")
+
+    idinfo = verify_google_id_token(idt)
+    user, is_new = get_or_create_user_from_google(session, idinfo)
+
+    token = create_access_token(user.id)
+    return VerifyOTPResponse(
+        token=token,
+        user=UserRead.model_validate(user),
+        is_new_user=is_new,
+    )
+
+# Optional: useful for mobile apps
+@router.post("/google/id-token", response_model=VerifyOTPResponse)
+def google_id_token_login(
+    data: GoogleTokenRequest,
+    session: Session = Depends(get_session),
+):
+    idinfo = verify_google_id_token(data.id_token)
+    user, is_new = get_or_create_user_from_google(session, idinfo)
+
+    token = create_access_token(user.id)
+    return VerifyOTPResponse(
+        token=token,
+        user=UserRead.model_validate(user),
+        is_new_user=is_new,
+    )

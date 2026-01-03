@@ -7,6 +7,18 @@ import { useAuth } from '../../contexts/AuthContext';
 import { authApi } from '../../api/services';
 import { PageTransition } from '../../components/Transitions/PageTransition';
 import { Spinner } from '../../components/Feedback/Spinner';
+import { loadGoogleIdentity, getGoogleClientId } from '../../auth/googleIdentity';
+import { useEffect } from 'react';
+
+const { login, loginWithGoogle } = useAuth();
+const [googleReady, setGoogleReady] = useState(false);
+const [googleLoading, setGoogleLoading] = useState(false);
+
+useEffect(() => {
+  loadGoogleIdentity()
+    .then(() => setGoogleReady(true))
+    .catch(() => setGoogleReady(false));
+}, []);
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -174,13 +186,31 @@ export function LoginPage() {
               
               <motion.button
                 type="button"
-                onClick={() => setStep('phone')}
-                whileHover={{ scale: 1.01 }}
-                whileTap={{ scale: 0.98 }}
-                className="w-full mt-3 py-2 text-text-muted text-sm hover:text-text-primary"
+                onClick={handleGoogleLogin}
+                disabled={!googleReady || googleLoading || loading}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.97 }}
+                className="w-full py-3 bg-white text-gray-800 font-medium rounded-lg border border-border hover:bg-gray-50 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
               >
-                {t('auth.changePhone')}
+                {googleLoading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Spinner className="h-4 w-4 border-gray-800 border-t-transparent" />
+                    Continue with Google
+                  </span>
+                ) : (
+                  <>
+                    <span className="text-lg">G</span>
+                    Continue with Google
+                  </>
+                )}
               </motion.button>
+
+              <div className="my-6 flex items-center gap-3">
+                <div className="h-px bg-border flex-1" />
+                <div className="text-xs text-text-muted">OR</div>
+                <div className="h-px bg-border flex-1" />
+              </div>
+
             </form>
           )}
         </div>
@@ -193,3 +223,53 @@ export function LoginPage() {
     </PageTransition>
   );
 }
+
+const handleGoogleLogin = async () => {
+  setError(null);
+
+  try {
+    setGoogleLoading(true);
+    await loadGoogleIdentity();
+
+    const client = window.google.accounts.oauth2.initCodeClient({
+      client_id: getGoogleClientId(),
+      scope: 'openid email profile',
+      ux_mode: 'popup',
+      select_account: true,
+      callback: async (response: { code?: string; error?: string }) => {
+        if (!response.code) {
+          const msg = response.error ? `Google error: ${response.error}` : 'Google sign-in failed';
+          setError(msg);
+          toast.error(msg);
+          setGoogleLoading(false);
+          return;
+        }
+
+        try {
+          const authResp = await loginWithGoogle(response.code);
+
+          if (authResp.is_new_user || !authResp.user.onboarding_completed) {
+            navigate('/onboarding');
+          } else {
+            navigate(from);
+          }
+
+          toast.success(t('auth.signedIn'));
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Google login failed';
+          setError(message);
+          toast.error(message);
+        } finally {
+          setGoogleLoading(false);
+        }
+      },
+    });
+
+    client.requestCode();
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Google login failed';
+    setError(message);
+    toast.error(message);
+    setGoogleLoading(false);
+  }
+};

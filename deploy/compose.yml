@@ -11,6 +11,8 @@ services:
       SMS_IR_API_KEY: ${SMS_IR_API_KEY}
       SMS_IR_TEMPLATE_ID: ${SMS_IR_TEMPLATE_ID}
       DEBUG_OTP: ${DEBUG_OTP}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID} 
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET} 
     env_file:
       - ../.env
     volumes:
@@ -31,6 +33,8 @@ services:
     build:
       context: ../frontend
     container_name: apply-frontend
+    environment:
+      VITE_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
     restart: unless-stopped
     expose:
       - "80"     # internal only

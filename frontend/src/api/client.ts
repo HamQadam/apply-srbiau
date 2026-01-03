@@ -41,17 +41,24 @@ async function request<T>(
 }
 
 export const api = {
-  get: <T>(endpoint: string) => request<T>(endpoint),
-  post: <T>(endpoint: string, data?: unknown) =>
+  get: <T>(endpoint: string, options?: RequestInit) =>
+    request<T>(endpoint, { ...(options || {}), method: 'GET' }),
+
+  post: <T>(endpoint: string, data?: unknown, options?: RequestInit) =>
     request<T>(endpoint, {
+      ...(options || {}),
       method: 'POST',
       body: data ? JSON.stringify(data) : undefined,
     }),
-  patch: <T>(endpoint: string, data: unknown) =>
+
+  patch: <T>(endpoint: string, data: unknown, options?: RequestInit) =>
     request<T>(endpoint, {
+      ...(options || {}),
       method: 'PATCH',
       body: JSON.stringify(data),
     }),
-  delete: <T>(endpoint: string) =>
-    request<T>(endpoint, { method: 'DELETE' }),
+
+  delete: <T>(endpoint: string, options?: RequestInit) =>
+    request<T>(endpoint, { ...(options || {}), method: 'DELETE' }),
 };
+
