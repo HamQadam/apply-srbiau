@@ -1,0 +1,13 @@
+[project]
+name = "postprocess-jobs"
+version = "0.1.0"
+description = "Post-process jobs for crawler outputs (rules-first, LLM fallback)."
+requires-python = ">=3.11"
+dependencies = [
+  "psycopg[binary]>=3.1.18",
+  "python-dotenv>=1.0.1",
+  "llama-cpp-python>=0.3.0",
+]
+
+[project.scripts]
+postprocess = "postprocess.cli:main"

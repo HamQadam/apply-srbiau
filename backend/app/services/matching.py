@@ -8,7 +8,6 @@ from ..models.course import Course
 from ..models.university import University
 from ..models.user import User
 
-
 # Available fields for selection
 AVAILABLE_FIELDS = [
     "Computer Science", "Data Science", "Artificial Intelligence", "Machine Learning",
@@ -53,7 +52,10 @@ INTAKE_OPTIONS = [
 ]
 
 # Degree levels
-DEGREE_LEVELS = ["Bachelor", "Master", "PhD", "MBA"]
+# DEGREE_LEVELS = ["Bachelor", "Master", "PhD", "MBA"]
+# Degree levels (MUST match Postgres enum degreelevel exactly)
+DEGREE_LEVELS = ["BACHELOR", "MASTER", "PHD", "DIPLOMA", "CERTIFICATE"]
+
 
 # Teaching languages
 TEACHING_LANGUAGES = ["English", "German", "French", "Dutch", "Spanish", "Italian"]
@@ -87,6 +89,10 @@ COUNTRY_GROUPS = {
     "Asia-Pacific": ["Japan", "South Korea", "Singapore", "Hong Kong"]
 }
 
+def normalize_degree_level(raw: str | None):
+    if not raw:
+        return None
+    return DEGREE_LEVEL_INPUT_MAP.get(raw) or DEGREE_LEVEL_INPUT_MAP.get(raw.strip().lower())
 
 class MatchingService:
     """Service for matching users with programs based on preferences."""
@@ -167,13 +173,13 @@ class MatchingService:
             else:
                 warnings.append(f"⚠ Over budget (€{course.tuition_fee_amount:,}/year)")
         
-        # --- Degree level matching (10 points max) ---
         preferred_level = profile.get("preferred_degree_level")
         if preferred_level and course.degree_level:
-            course_level = course.degree_level.value if hasattr(course.degree_level, 'value') else str(course.degree_level)
-            if course_level.lower() == preferred_level.lower():
+            course_level = course.degree_level.value if hasattr(course.degree_level, "value") else str(course.degree_level)
+            if course_level.strip().upper() == preferred_level.strip().upper():
                 score += 10
-                reasons.append(f"✓ {course_level.capitalize()} level")
+                reasons.append(f"✓ {course_level} level")
+
         
         # --- Language matching (10 points max) ---
         language_pref = profile.get("language_preference")
@@ -295,7 +301,9 @@ class MatchingService:
         # Pre-filter by degree level
         preferred_level = profile.get("preferred_degree_level")
         if preferred_level:
+            preferred_level = preferred_level.strip().upper()
             query = query.where(Course.degree_level == preferred_level)
+
         
         # Pre-filter by budget (with some margin)
         budget_max = profile.get("budget_max")
@@ -379,8 +387,9 @@ class MatchingService:
         
         preferred_level = profile.get("preferred_degree_level")
         if preferred_level:
+            preferred_level = preferred_level.strip().upper()
             query = query.where(Course.degree_level == preferred_level)
-        
+
         # Limit query
         query = query.limit(50)
         courses = self.session.exec(query).all()

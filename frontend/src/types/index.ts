@@ -131,6 +131,27 @@ export interface CourseSummary {
   deadline_fall: string | null;
 }
 
+// Paginated courses response
+export interface CoursesResponse {
+  courses: Course[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+// Course search parameters
+export interface CourseSearchParams {
+  query?: string;
+  field?: string;
+  fields?: string[];
+  country?: string;
+  countries?: string[];
+  degree_level?: DegreeLevel | '';
+  tuition_free_only?: boolean;
+  limit?: number;
+  offset?: number;
+}
+
 export type DegreeLevel = 'bachelor' | 'master' | 'phd' | 'diploma' | 'certificate';
 export type TeachingLanguage = 'english' | 'german' | 'french' | 'dutch' | 'spanish' | 'italian' | 'other';
 export type Currency = 'EUR' | 'USD' | 'CAD' | 'AUD' | 'GBP' | 'CHF';

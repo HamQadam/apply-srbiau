@@ -23,6 +23,11 @@
     --bg-inverse: 2 6 23;
     --text-inverse: 248 250 252;
     --text-inverse-muted: 148 163 184;
+    --font-sans: 'Manrope', ui-sans-serif, system-ui, sans-serif;
+  }
+  
+  html[lang="fa"] {
+    --font-sans: 'Vazir', 'Manrope', ui-sans-serif, system-ui, sans-serif;
   }
 
   .dark {
@@ -52,7 +57,7 @@ html {
 }
 
 body {
-  font-family: 'Manrope', ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-sans);
   background-color: rgb(var(--bg-background));
   color: rgb(var(--text-primary));
   -webkit-font-smoothing: antialiased;
@@ -73,6 +78,14 @@ body {
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
+}
+
+@font-face {
+  font-family: 'Vazir';
+  src: url('/fonts/Vazir-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
 }
 
 ::-webkit-scrollbar-track {

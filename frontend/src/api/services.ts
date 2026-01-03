@@ -5,6 +5,8 @@ import type {
   University,
   Course,
   CourseSummary,
+  CoursesResponse,
+  CourseSearchParams,
   TrackedProgram,
   TrackerStats,
   DeadlineItem,
@@ -154,30 +156,37 @@ export const universityApi = {
 
 // Courses
 export const courseApi = {
-  search: (params?: {
-    query?: string;
-    field?: string;
-    country?: string;
-    degree_level?: string;
-    tuition_free_only?: boolean;
-    limit?: number;
-  }) => {
+  search: (params?: CourseSearchParams) => {
     const searchParams = new URLSearchParams();
+    
     if (params?.query) searchParams.set('query', params.query);
     if (params?.field) searchParams.set('field', params.field);
-    if (params?.country) searchParams.set('country', params.country);
     if (params?.degree_level) searchParams.set('degree_level', params.degree_level);
     if (params?.tuition_free_only) searchParams.set('tuition_free_only', 'true');
     if (params?.limit) searchParams.set('limit', String(params.limit));
+    if (params?.offset) searchParams.set('offset', String(params.offset));
+    
+    // Multi-select: countries
+    if (params?.countries && params.countries.length > 0) {
+      params.countries.forEach((c) => searchParams.append('countries', c));
+    } else if (params?.country) {
+      searchParams.set('country', params.country);
+    }
+    
+    // Multi-select: fields
+    if (params?.fields && params.fields.length > 0) {
+      params.fields.forEach((f) => searchParams.append('fields', f));
+    }
+    
     const query = searchParams.toString();
-    return api.get<Course[]>(`/courses${query ? `?${query}` : ''}`);
+    return api.get<CoursesResponse>(`/courses${query ? `?${query}` : ''}`);
   },
   
   autocomplete: (q: string) => api.get<CourseSummary[]>(`/courses/autocomplete?q=${encodeURIComponent(q)}`),
   
   get: (id: number) => api.get<Course>(`/courses/${id}`),
   
-  getFields: () => api.get<Array<{ field: string; count: number }>>('/courses/fields'),
+  getFields: (minCount = 5) => api.get<Array<{ field: string; count: number }>>(`/courses/fields?min_count=${minCount}`),
   
   getStats: (id: number) => api.get<{
     course_id: number;

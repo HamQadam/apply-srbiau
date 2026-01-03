@@ -69,6 +69,13 @@ def save_matching_profile(
     """Save or update the user's matching profile."""
     # Convert to dict
     profile_dict = profile_data.model_dump(exclude_none=True)
+    if "preferred_degree_level" in profile_dict and profile_dict["preferred_degree_level"]:
+        profile_dict["preferred_degree_level"] = profile_dict["preferred_degree_level"].strip().upper()
+
+    allowed = {"BACHELOR", "MASTER", "PHD", "DIPLOMA", "CERTIFICATE"}
+    lvl = profile_dict.get("preferred_degree_level")
+    if lvl and lvl not in allowed:
+        raise HTTPException(status_code=400, detail=f"Invalid degree level: {lvl}")
     
     # Check if this is first time completing profile
     is_first_completion = not current_user.matching_profile_completed

@@ -119,6 +119,38 @@ services:
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
     restart: unless-stopped
 
+
+  # ─────────────────────────────────────────────────────────────
+  # Post-process: Deadline Refiner (rules-first, LLM fallback)
+  # ─────────────────────────────────────────────────────────────
+  deadline-refiner:
+    build: ../postprocess
+    command: ["run", "deadlines", "--batch-size", "200", "--max-rows", "50000"]
+    profiles: ["postprocess", "all-postprocess"]
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-apply_user}:${POSTGRES_PASSWORD:-apply_secret}@database:5432/${POSTGRES_DB:-apply_db}
+      TABLE_NAME: public.courses
+      ID_COLUMN: id
+      NOTES_COLUMN: deadline_notes
+      FALL_COLUMN: deadline_fall
+      SPRING_COLUMN: deadline_spring
+      LOCK_ROWS: "true"
+      LLM_ENABLED: ${LLM_ENABLED:-true}
+      LLM_MODEL_PATH: /models/Phi-3-mini-4k-instruct-q4.gguf
+      LLM_CTX: ${LLM_CTX:-1024}
+      LLM_BATCH: ${LLM_BATCH:-128}
+      LLM_THREADS: ${LLM_THREADS:-8}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    volumes:
+      - ./models:/models:ro
+    depends_on:
+      api:
+        condition: service_healthy
+      database:
+        condition: service_healthy
+    restart: "no"
+
+
 volumes:
   db:
   uploads:

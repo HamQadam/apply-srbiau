@@ -15,3 +15,5 @@ crawlers/refine/Phi-3-mini-4k-instruct-q4.gguf
 .gitignore
 ..gitignore.swp
 crawlers/refine/wget-log
+.vscode/
+deploy/models/

@@ -1,4 +1,4 @@
-"""Course/Program API endpoints."""
+"""Course/Program API endpoints with pagination and multi-select filters."""
 from typing import List, Optional
 from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -26,12 +26,14 @@ def enrich_course(course: Course) -> CourseRead:
     return data
 
 
-@router.get("", response_model=List[CourseRead])
+@router.get("")
 def search_courses(
     query: Optional[str] = None,
     field: Optional[str] = None,
+    fields: Optional[List[str]] = Query(default=None, description="Multiple fields filter"),
     degree_level: Optional[DegreeLevel] = None,
     country: Optional[str] = None,
+    countries: Optional[List[str]] = Query(default=None, description="Multiple countries filter"),
     teaching_language: Optional[TeachingLanguage] = None,
     max_tuition: Optional[int] = None,
     tuition_free_only: bool = False,
@@ -43,44 +45,93 @@ def search_courses(
     offset: int = Query(default=0, ge=0),
     session: Session = Depends(get_session),
 ):
-    """Search and filter courses."""
+    """Search and filter courses with pagination."""
+    # Build base query
     stmt = select(Course).join(University)
+    count_stmt = select(func.count(Course.id)).join(University)
     
+    # Text search
     if query:
-        stmt = stmt.where(
+        search_filter = (
             col(Course.name).ilike(f"%{query}%") |
             col(Course.field).ilike(f"%{query}%") |
             col(University.name).ilike(f"%{query}%")
         )
-    if field:
-        stmt = stmt.where(col(Course.field).ilike(f"%{field}%"))
+        stmt = stmt.where(search_filter)
+        count_stmt = count_stmt.where(search_filter)
+    
+    # Field filter - support both single and multiple
+    if fields and len(fields) > 0:
+        field_filter = col(Course.field).in_(fields)
+        stmt = stmt.where(field_filter)
+        count_stmt = count_stmt.where(field_filter)
+    elif field:
+        field_filter = col(Course.field).ilike(f"%{field}%")
+        stmt = stmt.where(field_filter)
+        count_stmt = count_stmt.where(field_filter)
+    
+    # Country filter - support both single and multiple
+    if countries and len(countries) > 0:
+        country_filter = University.country.in_(countries)
+        stmt = stmt.where(country_filter)
+        count_stmt = count_stmt.where(country_filter)
+    elif country:
+        country_filter = University.country == country
+        stmt = stmt.where(country_filter)
+        count_stmt = count_stmt.where(country_filter)
+    
+    # Degree level
     if degree_level:
         stmt = stmt.where(Course.degree_level == degree_level)
-    if country:
-        stmt = stmt.where(University.country == country)
+        count_stmt = count_stmt.where(Course.degree_level == degree_level)
+    
+    # Teaching language
     if teaching_language:
         stmt = stmt.where(Course.teaching_language == teaching_language)
+        count_stmt = count_stmt.where(Course.teaching_language == teaching_language)
+    
+    # Tuition filters
     if tuition_free_only:
         stmt = stmt.where(Course.is_tuition_free == True)
+        count_stmt = count_stmt.where(Course.is_tuition_free == True)
     if max_tuition:
-        stmt = stmt.where(
-            (Course.is_tuition_free == True) |
-            (Course.tuition_fee_amount <= max_tuition)
-        )
+        tuition_filter = (Course.is_tuition_free == True) | (Course.tuition_fee_amount <= max_tuition)
+        stmt = stmt.where(tuition_filter)
+        count_stmt = count_stmt.where(tuition_filter)
+    
+    # Scholarships
     if scholarships_only:
         stmt = stmt.where(Course.scholarships_available == True)
+        count_stmt = count_stmt.where(Course.scholarships_available == True)
+    
+    # GRE requirement
     if gre_not_required:
         stmt = stmt.where(Course.gre_required == False)
+        count_stmt = count_stmt.where(Course.gre_required == False)
+    
+    # Deadline filters
     if deadline_after:
         stmt = stmt.where(Course.deadline_fall >= deadline_after)
+        count_stmt = count_stmt.where(Course.deadline_fall >= deadline_after)
     if deadline_before:
         stmt = stmt.where(Course.deadline_fall <= deadline_before)
+        count_stmt = count_stmt.where(Course.deadline_fall <= deadline_before)
     
+    # Get total count
+    total = session.exec(count_stmt).one()
+    
+    # Apply ordering and pagination
     stmt = stmt.order_by(University.ranking_qs.asc().nullslast(), Course.name)
     stmt = stmt.offset(offset).limit(limit)
     
     courses = session.exec(stmt).all()
-    return [enrich_course(c) for c in courses]
+    
+    return {
+        "courses": [enrich_course(c) for c in courses],
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+    }
 
 
 @router.get("/autocomplete", response_model=List[CourseSummary])
@@ -118,12 +169,14 @@ def autocomplete_courses(
 
 @router.get("/fields")
 def list_fields(
+    min_count: int = Query(default=1, ge=1, description="Minimum number of courses in a field"),
     session: Session = Depends(get_session),
 ):
-    """Get list of fields/disciplines with course count."""
+    """Get list of fields/disciplines with course count, filtered by minimum count."""
     fields = session.exec(
-        select(Course.field, func.count(Course.id))
+        select(Course.field, func.count(Course.id).label("count"))
         .group_by(Course.field)
+        .having(func.count(Course.id) >= min_count)
         .order_by(func.count(Course.id).desc())
     ).all()
     
@@ -175,8 +228,6 @@ def get_course_stats(
     if not course:
         raise HTTPException(status_code=404, detail="Course not found")
     
-    # This would query the applicant profiles to get stats
-    # For now, return placeholder
     from app.models import TrackedProgram, ApplicationStatus
     
     tracked = session.exec(
