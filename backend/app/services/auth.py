@@ -11,6 +11,8 @@ from sqlmodel import Session, select
 from app.database import get_session
 from app.config import get_settings
 from app.models import User, OTPCode
+from app.services.sms import SMSIRClient
+
 
 settings = get_settings()
 security = HTTPBearer(auto_error=False)
@@ -24,10 +26,10 @@ def generate_otp() -> str:
 
 
 def create_otp(session: Session, phone: str) -> str:
-    """Create and store OTP for phone number."""
+    """Create, store, and send OTP for phone number."""
     code = generate_otp()
     expires_at = datetime.utcnow() + timedelta(minutes=settings.otp_expire_minutes)
-    
+
     otp = OTPCode(
         phone=phone,
         code=code,
@@ -35,9 +37,23 @@ def create_otp(session: Session, phone: str) -> str:
     )
     session.add(otp)
     session.commit()
-    
-    return code
 
+    if not settings.debug_otp:
+        if not settings.sms_ir_api_key or not settings.sms_ir_template_id:
+            raise RuntimeError(
+                "SMSIR is enabled but sms_ir_api_key or sms_ir_template_id is missing"
+            )
+
+        sms_client = SMSIRClient(api_key=settings.sms_ir_api_key)
+        sms_client.send_verification(
+            mobile=phone,
+            template_id=settings.sms_ir_template_id,
+            parameters=[
+                {"name": "CODE", "value": code},
+            ],
+        )
+
+    return code
 
 def verify_otp(session: Session, phone: str, code: str) -> bool:
     """Verify OTP code for phone number."""

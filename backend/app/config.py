@@ -1,7 +1,7 @@
 """Application configuration."""
 from functools import lru_cache
 from pydantic_settings import BaseSettings
-
+from pydantic import Field, field_validator
 
 class Settings(BaseSettings):
     # Database
@@ -12,6 +12,26 @@ class Settings(BaseSettings):
     postgres_port: int = 5432
     use_sqlite: bool = False	  # Use SQLite for local development
     
+    debug_otp: bool = False
+    sms_ir_api_key: str | None = None
+    sms_ir_template_id: int | None = None
+
+    @field_validator("debug_otp", mode="before")
+    @classmethod
+    def parse_debug_otp(cls, v):
+        if v in (None, "", "null"):
+            return False
+        if isinstance(v, bool):
+            return v
+        return str(v).lower() in {"1", "true", "yes", "on"}
+
+    @field_validator("sms_ir_template_id", mode="before")
+    @classmethod
+    def parse_sms_template_id(cls, v):
+        if v in (None, "", "null"):
+            return None
+        return int(v)
+
     @property
     def database_url(self) -> str:
         if self.use_sqlite:
