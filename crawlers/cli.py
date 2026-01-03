@@ -33,12 +33,11 @@ import sys
 from collections import Counter
 from datetime import datetime
 from pathlib import Path
-from typing import Any
 from urllib.parse import quote_plus
 
 from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
+from typing import Any, Optional, Union
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Unified Settings
@@ -57,7 +56,7 @@ class CrawlerSettings(BaseSettings):
     # ─────────────────────────────────────────────────────────────
     # Database Configuration
     # ─────────────────────────────────────────────────────────────
-    database_url: str | None = Field(
+    database_url: Optional[str] = Field(
         default=None,
         validation_alias=AliasChoices("DATABASE_URL", "database_url"),
     )
@@ -292,6 +291,46 @@ async def run_studyinnl(args: argparse.Namespace, cfg: CrawlerSettings) -> int:
     finally:
         await db.aclose()
 
+# Add this function to cli.py
+
+async def run_canada(args: argparse.Namespace, cfg: CrawlerSettings) -> int:
+    """Run UniversityStudy.ca crawler."""
+    # Import locally
+    from canada_ingestor.canada_crawler import UniversityStudyCrawler
+    from canada_ingestor.config import CanadaSettings
+    from db import PgStore
+    from base import IngestionEngine, IngestionConfig
+
+    # Load specific settings
+    can_cfg = CanadaSettings()
+
+    crawler = UniversityStudyCrawler(
+        base_url=can_cfg.base_url,
+        rps=can_cfg.rps,
+        max_pages=args.max_pages, # We will add this arg below
+    )
+
+    db = PgStore(
+        dsn=cfg.effective_database_url(),
+        schema=cfg.db_schema,
+    )
+
+    ingestion = IngestionConfig(
+        batch_size=cfg.batch_size,
+        dry_run=args.dry_run,
+        # failed_items_path=cfg.failed_items_path("canada"),
+        failed_items_path="failed_items_canada.jsonl"
+    )
+
+    engine = IngestionEngine(db, ingestion)
+
+    try:
+        await db.aopen()
+        await engine.run(crawler)
+        return 0
+    finally:
+        await db.aclose()
+
 
 async def run_analyze(args: argparse.Namespace, cfg: CrawlerSettings) -> int:
     """Analyze failed items from a previous run."""
@@ -476,7 +515,13 @@ Examples:
         default=None,
         help="Maximum programs to fetch (for testing)",
     )
-    
+
+    # Canada Command
+    canada_parser = subparsers.add_parser("canada", help="Crawl UniversityStudy.ca")
+    canada_parser.add_argument("--dry-run", action="store_true")
+    canada_parser.add_argument("--max-pages", type=int, default=None)
+
+
     # ─────────────────────────────────────────────────────────────
     # Analyze Command
     # ─────────────────────────────────────────────────────────────
@@ -517,7 +562,7 @@ Examples:
     
     args = parser.parse_args()
     setup_logging(verbose=args.verbose, log_file=args.log_file)
-    
+
     cfg = CrawlerSettings()
     
     if args.command == "daad":
@@ -528,6 +573,8 @@ Examples:
         return asyncio.run(run_analyze(args, cfg))
     elif args.command == "sources":
         return asyncio.run(run_list_sources(args))
+    elif args.command == "canada":
+        return asyncio.run(run_canada(args, cfg))
     else:
         parser.print_help()
         return 1
