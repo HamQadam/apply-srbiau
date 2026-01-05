@@ -13,6 +13,7 @@ services:
       DEBUG_OTP: ${DEBUG_OTP}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID} 
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET} 
+      CORS_ORIGINS: '["https://apply.ham-ghadam.ir","https://apply-api.ham-ghadam.ir","http://localhost:5173"]'
     env_file:
       - ../.env
     volumes:

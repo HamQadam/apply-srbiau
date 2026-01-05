@@ -28,8 +28,18 @@ export function loadGoogleIdentity(): Promise<void> {
   return loader;
 }
 
+declare global {
+  interface Window {
+    google?: any;
+    __ENV__?: Record<string, string>;
+  }
+}
+
 export function getGoogleClientId(): string {
-  const id = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
+  const runtime = window.__ENV__?.VITE_GOOGLE_CLIENT_ID;
+  const buildtime = (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID as string | undefined;
+  const id = runtime || buildtime;
+
   if (!id) throw new Error("Missing VITE_GOOGLE_CLIENT_ID");
   return id;
 }

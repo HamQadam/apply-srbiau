@@ -73,6 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading,
         isAuthenticated: !!user,
         login,
+        loginWithGoogle, // ✅ add this
         logout,
         refreshUser,
         setGoal,

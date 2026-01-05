@@ -8,6 +8,8 @@ RUN npm run build
 
 # serve
 FROM nginx:alpine
+COPY 99-env.sh /docker-entrypoint.d/99-env.sh
+RUN chmod +x /docker-entrypoint.d/99-env.sh
 COPY --from=build /app/dist /usr/share/nginx/html
 
 # SPA fallback (React Router)
