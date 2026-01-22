@@ -6,7 +6,7 @@ from sqlmodel import Session, select
 from app.database import get_session
 from app.models import (
     User, GhadamTransaction, GhadamTransactionRead,
-    TransactionType, GHADAM_REWARDS, GHADAM_COSTS,
+    ApplicantStatus, TransactionType, GHADAM_REWARDS, GHADAM_COSTS,
     PROFILE_VIEW_COST, CONTRIBUTOR_SHARE,
 )
 from app.services.auth import get_current_user

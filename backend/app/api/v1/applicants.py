@@ -10,8 +10,11 @@ from app.models import (
     ApplicantPreview,
     ApplicantUpdate,
     UserRole,
+    ApplicantStatus
 )
 from app.services.ghadam import reward_profile_created, can_view_applicant
+from app.models.applicant import ApplicantStatus
+
 
 router = APIRouter(prefix="/applicants", tags=["applicants"])
 
@@ -60,7 +63,7 @@ def list_applicants(
     graduation_year: int | None = None,
 ):
     """List all applicant profiles. Filter by university, major, or year."""
-    query = select(Applicant)
+    query = select(Applicant).where(Applicant.status == ApplicantStatus.PUBLISHED)
     
     if university:
         query = query.where(col(Applicant.university).ilike(f"%{university}%"))
