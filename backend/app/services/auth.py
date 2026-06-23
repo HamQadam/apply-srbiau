@@ -18,9 +18,14 @@ settings = get_settings()
 security = HTTPBearer(auto_error=False)
 
 
+def debug_otp_enabled() -> bool:
+    """Allow fixed OTP login in explicit debug/development modes."""
+    return settings.debug or settings.debug_otp
+
+
 def generate_otp() -> str:
     """Generate 6-digit OTP code."""
-    if settings.debug_otp:
+    if debug_otp_enabled():
         return "000000"
     return "".join(random.choices(string.digits, k=6))
 
@@ -38,10 +43,15 @@ def create_otp(session: Session, phone: str) -> str:
     session.add(otp)
     session.commit()
 
-    if not settings.debug_otp:
+    if not debug_otp_enabled():
         if not settings.sms_ir_api_key or not settings.sms_ir_template_id:
-            raise RuntimeError(
-                "SMSIR is enabled but sms_ir_api_key or sms_ir_template_id is missing"
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=(
+                    "OTP SMS is not configured. Set DEBUG=true or DEBUG_OTP=true "
+                    "for local development, or configure SMS_IR_API_KEY and "
+                    "SMS_IR_TEMPLATE_ID for real OTP delivery."
+                ),
             )
 
         sms_client = SMSIRClient(api_key=settings.sms_ir_api_key)
@@ -57,6 +67,19 @@ def create_otp(session: Session, phone: str) -> str:
 
 def verify_otp(session: Session, phone: str, code: str) -> bool:
     """Verify OTP code for phone number."""
+    if debug_otp_enabled() and code == "000000":
+        otp = session.exec(
+            select(OTPCode)
+            .where(OTPCode.phone == phone)
+            .where(OTPCode.code == code)
+            .where(OTPCode.used == False)
+            .order_by(OTPCode.created_at.desc())
+        ).first()
+        if otp:
+            otp.used = True
+            session.commit()
+        return True
+
     otp = session.exec(
         select(OTPCode)
         .where(OTPCode.phone == phone)

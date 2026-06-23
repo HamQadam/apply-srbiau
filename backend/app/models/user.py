@@ -8,6 +8,8 @@ from sqlalchemy import Enum as SAEnum, JSON
 if TYPE_CHECKING:
     from .tracked_program import TrackedProgram
     from .ghadam import GhadamTransaction
+    from .applicant import Applicant
+    from .subscription import Subscription
 
 class AuthProvider(str, Enum):
     PHONE = "phone"
@@ -88,6 +90,11 @@ class User(UserBase, table=True):
     # Relationships
     tracked_programs: List["TrackedProgram"] = Relationship(back_populates="user")
     ghadam_transactions: List["GhadamTransaction"] = Relationship(back_populates="user")
+    applicant: Optional["Applicant"] = Relationship(back_populates="user")
+    subscriptions: List["Subscription"] = Relationship(
+        back_populates="subscriber",
+        sa_relationship_kwargs={"foreign_keys": "[Subscription.subscriber_id]"},
+    )
 
 
 class UserCreate(SQLModel):

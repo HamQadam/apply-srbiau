@@ -11,17 +11,18 @@ class Settings(BaseSettings):
     postgres_host: str = "localhost"
     postgres_port: int = 5432
     use_sqlite: bool = False	  # Use SQLite for local development
+    debug: bool = False
+    debug_otp: bool = False  # All OTPs are 000000 when explicitly enabled
     
-    debug_otp: bool = False
     sms_ir_api_key: str | None = None
     sms_ir_template_id: int | None = None
 
     google_client_id: str | None = None
     google_client_secret: str | None = None
 
-    @field_validator("debug_otp", mode="before")
+    @field_validator("debug", "debug_otp", mode="before")
     @classmethod
-    def parse_debug_otp(cls, v):
+    def parse_debug_flags(cls, v):
         if v in (None, "", "null"):
             return False
         if isinstance(v, bool):
@@ -47,11 +48,9 @@ class Settings(BaseSettings):
     jwt_expire_minutes: int = 60 * 24 * 7  # 1 week
     
     # OTP
-    debug_otp: bool = True  # All OTPs are 000000 in debug mode
     otp_expire_minutes: int = 5
     
     # App
-    debug: bool = True
     cors_origins: list[str] = ["http://localhost:5173", "http://localhost:3000"]
     
     # File storage

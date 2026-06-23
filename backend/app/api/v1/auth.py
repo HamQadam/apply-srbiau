@@ -14,7 +14,7 @@ from app.models import (
     SIGNUP_BONUS_GHADAMS, COMPLETE_ONBOARDING_BONUS,
 )
 from app.services.auth import (
-    create_otp, verify_otp, create_access_token, get_current_user,
+    create_otp, debug_otp_enabled, verify_otp, create_access_token, get_current_user,
 )
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -52,14 +52,9 @@ def request_otp(
     # Create OTP
     code = create_otp(session, phone)
     
-    # In production: send SMS via Kavenegar/Twilio
-    # For now, return code in debug mode
-    from app.config import get_settings
-    settings = get_settings()
-    
     return RequestOTPResponse(
         message="OTP sent successfully",
-        debug_code=code if settings.debug_otp else None,
+        debug_code=code if debug_otp_enabled() else None,
     )
 
 

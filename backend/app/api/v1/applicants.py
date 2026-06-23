@@ -9,11 +9,9 @@ from app.models import (
     ApplicantReadFull,
     ApplicantPreview,
     ApplicantUpdate,
-    UserRole,
-    ApplicantStatus
+    ApplicantStatus,
 )
 from app.services.ghadam import reward_profile_created, can_view_applicant
-from app.models.applicant import ApplicantStatus
 
 
 router = APIRouter(prefix="/applicants", tags=["applicants"])

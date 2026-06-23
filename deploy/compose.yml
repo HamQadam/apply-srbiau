@@ -4,18 +4,16 @@ services:
       context: ../backend
     container_name: apply-api
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER:-apply_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-apply_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-apply_db}
       POSTGRES_HOST: database
-      SMS_IR_API_KEY: ${SMS_IR_API_KEY}
-      SMS_IR_TEMPLATE_ID: ${SMS_IR_TEMPLATE_ID}
-      DEBUG_OTP: ${DEBUG_OTP}
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID} 
-      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET} 
-      CORS_ORIGINS: '["https://apply.ham-ghadam.ir","https://apply-api.ham-ghadam.ir","http://localhost:5173"]'
+      DEBUG: ${DEBUG:-false}
+      DEBUG_OTP: ${DEBUG_OTP:-false}
+      CORS_ORIGINS: '["https://apply.ham-ghadam.ir","https://apply-api.ham-ghadam.ir","http://localhost","http://127.0.0.1","http://localhost:5173","http://127.0.0.1:5173"]'
     env_file:
-      - ../.env
+      - path: ../.env
+        required: false
     volumes:
       - uploads:/app/uploads
     depends_on:
@@ -35,7 +33,7 @@ services:
       context: ../frontend
     container_name: apply-frontend
     environment:
-      VITE_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      VITE_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
     restart: unless-stopped
     expose:
       - "80"     # internal only
@@ -95,18 +93,19 @@ services:
     image: postgres:16
     container_name: apply-db
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER:-apply_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-apply_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-apply_db}
       PGDATA: /data/postgres
     ports:
       - 127.0.0.1:5432:5432
     env_file:
-      - ../.env
+      - path: ../.env
+        required: false
     volumes:
       - db:/data/postgres
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -119,7 +118,7 @@ services:
       - api
       - frontend
     ports:
-      - "80:80"
+      - "${NGINX_HTTP_PORT:-80}:80"
       # later when you add TLS:
       # - "443:443"
     volumes:
@@ -161,4 +160,4 @@ services:
 volumes:
   db:
   uploads:
-  daad_state:
+  crawler-state:

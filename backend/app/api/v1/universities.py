@@ -8,9 +8,19 @@ from app.models import (
     University, UniversityCreate, UniversityRead, UniversitySearch,
     Course,
 )
+from app.config import get_settings
 from app.services.auth import get_optional_user
 
 router = APIRouter(prefix="/universities", tags=["universities"])
+
+
+def require_debug_catalog_writes() -> None:
+    settings = get_settings()
+    if not settings.debug:
+        raise HTTPException(
+            status_code=403,
+            detail="Catalog writes are only enabled in DEBUG mode.",
+        )
 
 
 @router.get("", response_model=List[UniversityRead])
@@ -51,6 +61,35 @@ def list_universities(
         result.append(data)
     
     return result
+
+
+@router.post("", response_model=UniversityRead, status_code=201)
+@router.post("/", response_model=UniversityRead, status_code=201, include_in_schema=False)
+def create_university(
+    data: UniversityCreate,
+    session: Session = Depends(get_session),
+):
+    """Create a university in local DEBUG mode for development seeding."""
+    require_debug_catalog_writes()
+
+    existing = session.exec(
+        select(University)
+        .where(University.name == data.name)
+        .where(University.country == data.country)
+    ).first()
+    if existing:
+        response = UniversityRead.model_validate(existing)
+        response.course_count = len(existing.courses)
+        return response
+
+    university = University.model_validate(data)
+    session.add(university)
+    session.commit()
+    session.refresh(university)
+
+    response = UniversityRead.model_validate(university)
+    response.course_count = 0
+    return response
 
 
 @router.get("/countries")

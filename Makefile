@@ -1,28 +1,44 @@
+COMPOSE=docker compose -f deploy/compose.yml
+LOCAL_BASE_URL?=http://localhost
+SEED_ENV=DEBUG=true DEBUG_OTP=true
+
 build:
-	 docker compose -f deploy/compose.yml down -v && docker compose -f deploy/compose.yml up -d --build 
+	$(COMPOSE) up -d --build
+
+rebuild-clean:
+	$(COMPOSE) down -v
+	$(COMPOSE) up -d --build
+
 seed:
-	cd backend;uv run seed  --base-url https://apply-api.ham-ghadam.ir   --contributors 10   --universities 8   --courses-per-uni 4   --langs-per-applicant 2   --acts-per-applicant 3   --docs-per-applicant 2   --apps-per-applicant 4   --do-purchases   --purchase-count 8
+	$(SEED_ENV) $(COMPOSE) up -d --build --wait api nginx
+	$(COMPOSE) restart nginx
+	cd backend; uv run seed --base-url $(LOCAL_BASE_URL) --contributors 100 --universities 80 --courses-per-uni 40 --langs-per-applicant 3 --acts-per-applicant 5 --docs-per-applicant 2 --apps-per-applicant 6 --do-purchases --purchase-count 8
+
+seed-small:
+	$(SEED_ENV) $(COMPOSE) up -d --build --wait api nginx
+	$(COMPOSE) restart nginx
+	cd backend; uv run seed --base-url $(LOCAL_BASE_URL) --contributors 2 --universities 3 --courses-per-uni 2 --langs-per-applicant 1 --acts-per-applicant 1 --docs-per-applicant 1 --apps-per-applicant 2
 log:
-	 docker compose -f deploy/compose.yml logs -f 
+	$(COMPOSE) logs -f
 psql:
 	docker exec -it apply-db psql -U apply_user apply_db
 run:
-	 docker compose -f deploy/compose.yml up -d
+	 $(COMPOSE) up -d
 crawl-daad:
-	 docker compose -f deploy/compose.yml run --build --rm daad-crawler
+	 $(COMPOSE) run --build --rm daad-crawler
 crawl-nl:
-	 docker compose -f deploy/compose.yml run --build --rm studyinnl-crawler
+	 $(COMPOSE) run --build --rm studyinnl-crawler
 up-front:
-	 docker compose -f deploy/compose.yml up frontend -d --build && docker compose -f deploy/compose.yml logs -f frontend
+	 $(COMPOSE) up frontend -d --build && $(COMPOSE) logs -f frontend
 up-back:
-	 docker compose -f deploy/compose.yml up api -d --build && docker compose -f deploy/compose.yml logs -f api 
+	$(COMPOSE) up api -d --build && $(COMPOSE) logs -f api
 postprocess-deadlines:
-	 docker compose -f deploy/compose.yml run --build --rm deadline-refiner
+	 $(COMPOSE) run --build --rm deadline-refiner
 
 exec:
-	 docker compose -f deploy/compose.yml exec $(container) sh
+	 $(COMPOSE) exec $(container) sh
 
 # Show logs for a specific container
 # Usage: make logs container=api
 logs:
-	 docker compose -f deploy/compose.yml logs -f $(container)
+	 $(COMPOSE) logs -f $(container)

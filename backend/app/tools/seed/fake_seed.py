@@ -140,7 +140,7 @@ class DataFactory:
             ("University of Padova", "Italy"),
             ("KTH Royal Institute of Technology", "Sweden"),
         ]
-        self.degree_levels = ["masters", "phd", "mba", "postdoc"]
+        self.degree_levels = ["bachelor", "master", "phd"]
         self.application_statuses = [
             "preparing", "submitted", "under_review", "interview",
             "accepted", "rejected", "waitlisted", "withdrawn",
@@ -165,7 +165,7 @@ class DataFactory:
             "researching", "preparing", "submitted", "interview",
             "accepted", "rejected", "waitlisted",
         ]
-        self.tracker_priorities = ["reach", "target", "safety"]
+        self.tracker_priorities = ["dream", "target", "safety"]
         self.checklist_templates = [
             ["SOP", "CV", "Transcript", "Recommendation Letters", "Portfolio"],
             ["SOP", "CV", "Transcript", "IELTS/TOEFL", "GRE (if needed)"],
@@ -294,8 +294,15 @@ class DataFactory:
         known_course: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         if known_course:
-            program_name = known_course.get("course_name") or "MSc Computer Science"
-            degree_level = known_course.get("degree_level") or "masters"
+            program_name = known_course.get("name") or known_course.get("course_name") or "MSc Computer Science"
+            course_degree = known_course.get("degree_level") or "master"
+            degree_level = {
+                "bachelor": "masters",
+                "master": "masters",
+                "phd": "phd",
+                "mba": "mba",
+                "postdoc": "postdoc",
+            }.get(str(course_degree), "masters")
         else:
             program_name = random.choice([
                 "MSc Computer Science",
@@ -390,18 +397,31 @@ class DataFactory:
             "MBA Technology Management",
         ])
         deadline = date.today() + timedelta(days=random.randint(30, 240))
+        is_tuition_free = random.random() < 0.25
+        tuition_amount = None if is_tuition_free else random.choice([1500, 3000, 9000, 12000, 18000])
         return {
-            "course_name": course_name[:300],
-            "department": random.choice(["Computer Science", "Engineering", "AI", None]),
+            "name": course_name[:300],
             "degree_level": "phd" if course_name.startswith("PhD") else degree_level,
-            "website_url": self.faker.url(),
-            "description": self.faker.text(max_nb_chars=400)[:3000],
-            "language_requirements": random.choice(["IELTS 6.5", "TOEFL 90", "DELF B2", None]),
-            "minimum_gpa": random.choice(["3.0/4.0", "16/20", None]),
-            "application_deadline": deadline.isoformat(),
-            "tuition_fees": random.choice(["€12,000/year", "€0 (funded)", "€3,000/year", None]),
+            "field": random.choice(["Computer Science", "Data Science", "Artificial Intelligence", "Engineering"]),
+            "teaching_language": random.choice(["english", "german", "french", "dutch", "italian", "swedish"]),
             "duration_months": random.choice([12, 18, 24, 36, None]),
+            "credits_ects": random.choice([60, 90, 120, None]),
+            "is_tuition_free": is_tuition_free,
+            "tuition_fee_amount": tuition_amount,
+            "tuition_fee_currency": None if is_tuition_free else "EUR",
+            "tuition_fee_per": "year",
+            "deadline_fall": deadline.isoformat(),
+            "deadline_spring": None,
+            "deadline_notes": random.choice(["Non-EU applicants should apply earlier.", None]),
+            "gpa_minimum": random.choice([2.7, 3.0, 3.2, None]),
+            "gpa_scale": "4.0",
+            "gre_required": False,
+            "gmat_required": course_name.startswith("MBA"),
+            "description": self.faker.text(max_nb_chars=400)[:3000],
             "scholarships_available": random.random() < 0.5,
+            "scholarship_details": random.choice(["Merit and need-based scholarships may be available.", None]),
+            "program_url": self.faker.url(),
+            "application_url": self.faker.url(),
             "notes": random.choice(["Competitive, apply early.", None]),
             "university_id": university_id,
         }
@@ -465,11 +485,8 @@ class DataFactory:
             # Use catalog entry: course_id only, backend will infer university/country
             return {
                 "course_id": int(known_course["id"]),
-                "deadline": deadline.isoformat(),
-                "status": status,
                 "priority": priority,
                 "notes": notes,
-                "documents_checklist": checklist,
             }
 
         # Custom entry
@@ -489,13 +506,11 @@ class DataFactory:
 
         return {
             "custom_program_name": custom_program_name,
-            "university_name": uni_name,
-            "country": country,
-            "deadline": deadline.isoformat(),
-            "status": status,
+            "custom_university_name": uni_name,
+            "custom_country": country,
+            "custom_deadline": deadline.isoformat(),
             "priority": priority,
             "notes": notes,
-            "documents_checklist": checklist,
         }
 
 
@@ -518,7 +533,7 @@ class Seeder:
         self.log(f"[auth] send otp -> {phone}")
         _ = self.api.request(
             "POST",
-            "/api/v1/auth/send-otp",
+            "/api/v1/auth/request-otp",
             json_body={"phone": phone},
             expected=(200, 422),
         )
@@ -530,7 +545,7 @@ class Seeder:
             json_body={"phone": phone, "code": self.api.cfg.otp_code},
             expected=(200,),
         )
-        token = resp["access_token"]
+        token = resp["token"]
         user = resp["user"]
 
         c = self.api.with_token(token)
@@ -539,8 +554,8 @@ class Seeder:
             try:
                 _ = c.request(
                     "PATCH",
-                    "/api/v1/auth/update-profile",
-                    params={"display_name": display_name},
+                    "/api/v1/auth/me",
+                    json_body={"display_name": display_name},
                     expected=(200,),
                 )
             except ApiError as e:
@@ -701,7 +716,7 @@ class Seeder:
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Seed Apply SRBIAU API with consistent fake data.")
-    p.add_argument("--base-url", default=os.getenv("APPLY_BASE_URL", "http://localhost:8000"))
+    p.add_argument("--base-url", default=os.getenv("APPLY_BASE_URL", "http://localhost"))
     p.add_argument("--otp-code", default=os.getenv("APPLY_OTP_CODE", "000000"))
     p.add_argument("--seed", type=int, default=int(os.getenv("APPLY_SEED", "42")))
 

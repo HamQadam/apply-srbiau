@@ -5,12 +5,11 @@ from app.api.deps import SessionDep, CurrentUserRequired
 from app.models import (
     Applicant,
     Application,
-    ApplicationStatus,
-    DegreeLevel,
     ApplicationCreate,
     ApplicationRead,
     ApplicationUpdate,
 )
+from app.models.application import ApplicationStatus, DegreeLevel
 from app.services.ghadam import reward_application_added
 
 router = APIRouter(prefix="/applicants/{applicant_id}/applications", tags=["applications"])

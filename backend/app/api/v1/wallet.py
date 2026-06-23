@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Query
 from sqlmodel import select, SQLModel
 
 from app.api.deps import SessionDep, CurrentUserRequired
-from app.models import Transaction, TransactionRead, GhadamRewards
+from app.models import GhadamTransaction, GhadamTransactionRead, GhadamRewards, TransactionType
 from app.services.ghadam import process_withdrawal
 
 router = APIRouter(prefix="/wallet", tags=["wallet"])
@@ -24,7 +24,7 @@ class WithdrawRequest(SQLModel):
 class WithdrawResponse(SQLModel):
     success: bool
     message: str
-    transaction: TransactionRead | None = None
+    transaction: GhadamTransactionRead | None = None
     money_value: int | None = None
 
 
@@ -46,15 +46,24 @@ class RewardRates(SQLModel):
 @router.get("/balance", response_model=WalletBalance)
 def get_balance(user: CurrentUserRequired):
     """Get current user's ghadam wallet balance."""
+    transactions = user.ghadam_transactions
+    total_earned = sum(tx.amount for tx in transactions if tx.amount > 0)
+    total_spent = sum(abs(tx.amount) for tx in transactions if tx.amount < 0)
+    total_withdrawn = sum(
+        abs(tx.amount)
+        for tx in transactions
+        if tx.transaction_type == TransactionType.WITHDRAWAL
+    )
+
     return WalletBalance(
         ghadam_balance=user.ghadam_balance,
-        total_earned=user.total_earned,
-        total_spent=user.total_spent,
-        total_withdrawn=user.total_withdrawn,
+        total_earned=total_earned,
+        total_spent=total_spent,
+        total_withdrawn=total_withdrawn,
     )
 
 
-@router.get("/transactions", response_model=list[TransactionRead])
+@router.get("/transactions", response_model=list[GhadamTransactionRead])
 def get_transactions(
     session: SessionDep,
     user: CurrentUserRequired,
@@ -63,9 +72,9 @@ def get_transactions(
 ):
     """Get user's transaction history."""
     query = (
-        select(Transaction)
-        .where(Transaction.user_id == user.id)
-        .order_by(Transaction.created_at.desc())
+        select(GhadamTransaction)
+        .where(GhadamTransaction.user_id == user.id)
+        .order_by(GhadamTransaction.created_at.desc())
         .offset(skip)
         .limit(limit)
     )
@@ -110,7 +119,7 @@ def withdraw(
     return WithdrawResponse(
         success=True,
         message=f"درخواست برداشت {request.amount} قدم = {money_value:,} تومان ثبت شد",
-        transaction=TransactionRead.model_validate(transaction),
+        transaction=GhadamTransactionRead.model_validate(transaction),
         money_value=money_value,
     )
 

@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select, func, col
 
 from app.database import get_session
+from app.config import get_settings
 from app.models import (
     Course, CourseCreate, CourseRead, CourseSearch, CourseSummary,
     University, DegreeLevel, TeachingLanguage,
@@ -13,6 +14,15 @@ from app.models import (
 from app.services.auth import get_optional_user
 
 router = APIRouter(prefix="/courses", tags=["courses"])
+
+
+def require_debug_catalog_writes() -> None:
+    settings = get_settings()
+    if not settings.debug:
+        raise HTTPException(
+            status_code=403,
+            detail="Catalog writes are only enabled in DEBUG mode.",
+        )
 
 
 def enrich_course(course: Course) -> CourseRead:
@@ -132,6 +142,35 @@ def search_courses(
         "limit": limit,
         "offset": offset,
     }
+
+
+@router.post("", response_model=CourseRead, status_code=201)
+@router.post("/", response_model=CourseRead, status_code=201, include_in_schema=False)
+def create_course(
+    data: CourseCreate,
+    session: Session = Depends(get_session),
+):
+    """Create a course in local DEBUG mode for development seeding."""
+    require_debug_catalog_writes()
+
+    university = session.get(University, data.university_id)
+    if not university:
+        raise HTTPException(status_code=404, detail="University not found")
+
+    existing = session.exec(
+        select(Course)
+        .where(Course.university_id == data.university_id)
+        .where(Course.name == data.name)
+    ).first()
+    if existing:
+        return enrich_course(existing)
+
+    course = Course.model_validate(data)
+    session.add(course)
+    session.commit()
+    session.refresh(course)
+
+    return enrich_course(course)
 
 
 @router.get("/autocomplete", response_model=List[CourseSummary])

@@ -3,8 +3,7 @@ from sqlmodel import Session, select
 
 from app.models import (
     User,
-    UserRole,
-    Transaction,
+    GhadamTransaction,
     TransactionType,
     Applicant,
     Subscription,
@@ -21,25 +20,18 @@ def add_transaction(
     description: Optional[str] = None,
     reference_type: Optional[str] = None,
     reference_id: Optional[int] = None,
-) -> Transaction:
+) -> GhadamTransaction:
     """Add a ghadam transaction and update user balance."""
-    # Update balance
     user.ghadam_balance += amount
-    
-    if amount > 0:
-        user.total_earned += amount
-    else:
-        user.total_spent += abs(amount)
-    
-    # Create transaction record
-    transaction = Transaction(
+
+    transaction = GhadamTransaction(
         user_id=user.id,
         transaction_type=transaction_type,
         amount=amount,
         balance_after=user.ghadam_balance,
         description=description,
-        reference_type=reference_type,
-        reference_id=reference_id,
+        related_entity_type=reference_type,
+        related_entity_id=reference_id,
     )
     
     session.add(user)
@@ -50,16 +42,12 @@ def add_transaction(
     return transaction
 
 
-def reward_profile_created(session: Session, user: User, applicant: Applicant) -> Transaction:
+def reward_profile_created(session: Session, user: User, applicant: Applicant) -> GhadamTransaction:
     """Reward user for creating an applicant profile."""
-    # Update user role to contributor
-    user.role = UserRole.CONTRIBUTOR
-    session.add(user)
-    
     return add_transaction(
         session,
         user,
-        TransactionType.EARN_PROFILE,
+        TransactionType.PROFILE_CREATED,
         GhadamRewards.PROFILE_CREATED,
         description="پروفایل متقاضی ایجاد شد",  # Applicant profile created
         reference_type="applicant",
@@ -72,14 +60,14 @@ def reward_application_added(
     user: User, 
     application_id: int,
     has_notes: bool = False
-) -> Transaction:
+) -> GhadamTransaction:
     """Reward user for adding an application."""
     amount = GhadamRewards.APPLICATION_WITH_NOTES if has_notes else GhadamRewards.APPLICATION_ADDED
     
     return add_transaction(
         session,
         user,
-        TransactionType.EARN_APPLICATION,
+        TransactionType.APPLICATION_SHARED,
         amount,
         description="اپلیکیشن جدید اضافه شد" + (" (با نکات)" if has_notes else ""),
         reference_type="application",
@@ -87,12 +75,12 @@ def reward_application_added(
     )
 
 
-def reward_document_uploaded(session: Session, user: User, document_id: int) -> Transaction:
+def reward_document_uploaded(session: Session, user: User, document_id: int) -> GhadamTransaction:
     """Reward user for uploading a document."""
     return add_transaction(
         session,
         user,
-        TransactionType.EARN_DOCUMENT,
+        TransactionType.DOCUMENT_UPLOADED,
         GhadamRewards.DOCUMENT_UPLOADED,
         description="سند آپلود شد",  # Document uploaded
         reference_type="document",
@@ -100,12 +88,12 @@ def reward_document_uploaded(session: Session, user: User, document_id: int) -> 
     )
 
 
-def reward_language_added(session: Session, user: User, credential_id: int) -> Transaction:
+def reward_language_added(session: Session, user: User, credential_id: int) -> GhadamTransaction:
     """Reward user for adding language credential."""
     return add_transaction(
         session,
         user,
-        TransactionType.EARN_LANGUAGE,
+        TransactionType.PROFILE_COMPLETED,
         GhadamRewards.LANGUAGE_ADDED,
         description="مدرک زبان اضافه شد",  # Language credential added
         reference_type="language",
@@ -113,12 +101,12 @@ def reward_language_added(session: Session, user: User, credential_id: int) -> T
     )
 
 
-def reward_activity_added(session: Session, user: User, activity_id: int) -> Transaction:
+def reward_activity_added(session: Session, user: User, activity_id: int) -> GhadamTransaction:
     """Reward user for adding activity."""
     return add_transaction(
         session,
         user,
-        TransactionType.EARN_ACTIVITY,
+        TransactionType.PROFILE_COMPLETED,
         GhadamRewards.ACTIVITY_ADDED,
         description="فعالیت اضافه شد",  # Activity added
         reference_type="activity",
@@ -126,12 +114,12 @@ def reward_activity_added(session: Session, user: User, activity_id: int) -> Tra
     )
 
 
-def reward_view_earned(session: Session, applicant_owner: User, viewer: User, amount: int) -> Transaction:
+def reward_view_earned(session: Session, applicant_owner: User, viewer: User, amount: int) -> GhadamTransaction:
     """Reward applicant owner when someone pays to view their profile."""
     return add_transaction(
         session,
         applicant_owner,
-        TransactionType.EARN_VIEW,
+        TransactionType.PROFILE_VIEWED,
         amount,
         description=f"بازدید از پروفایل شما",  # Profile viewed
         reference_type="user",
@@ -158,7 +146,7 @@ def spend_for_view(
     add_transaction(
         session,
         viewer,
-        TransactionType.SPEND_VIEW,
+        TransactionType.PROFILE_VIEW_COST,
         -price,
         description=f"مشاهده پروفایل {applicant.display_name}",
         reference_type="applicant",
@@ -169,8 +157,8 @@ def spend_for_view(
     if applicant.user_id:
         owner = session.get(User, applicant.user_id)
         if owner:
-            # Owner gets 80% of view price
-            owner_reward = int(price * 0.8)
+            # Owner gets 70% of view price.
+            owner_reward = int(price * 0.7)
             reward_view_earned(session, owner, viewer, owner_reward)
     
     # Update applicant stats
@@ -218,15 +206,11 @@ def can_view_applicant(session: Session, user: Optional[User], applicant: Applic
     if applicant.user_id == user.id:
         return True
     
-    # If user is admin
-    if user.role == UserRole.ADMIN:
-        return True
-    
     # Check subscription
     return check_subscription(session, user.id, applicant.id)
 
 
-def process_withdrawal(session: Session, user: User, amount: int) -> Optional[Transaction]:
+def process_withdrawal(session: Session, user: User, amount: int) -> Optional[GhadamTransaction]:
     """
     Process ghadam withdrawal to real money.
     Returns Transaction if successful, None if insufficient balance.
@@ -243,15 +227,11 @@ def process_withdrawal(session: Session, user: User, amount: int) -> Optional[Tr
     transaction = add_transaction(
         session,
         user,
-        TransactionType.WITHDRAW,
+        TransactionType.WITHDRAWAL,
         -amount,
         description=f"برداشت {amount} قدم = {money_value:,} تومان",
     )
-    
-    user.total_withdrawn += amount
-    session.add(user)
-    session.commit()
-    
+
     return transaction
 
 

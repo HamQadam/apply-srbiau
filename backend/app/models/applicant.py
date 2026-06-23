@@ -1,11 +1,19 @@
 from datetime import datetime
-from typing import Optional, TYPE_CHECKING
+from typing import Literal, Optional, TYPE_CHECKING
+from pydantic import BaseModel
 from sqlmodel import SQLModel, Field, Relationship, Column
-from decimal import Decimal
 from sqlalchemy import Enum as SAEnum
 from enum import Enum
-from app.models.applicant_work_experience import ApplicantWorkExperience, ApplicantWorkExperienceRead
-from app.models.applicant_language_test import ApplicantLanguageTest, ApplicantLanguageTestRead
+from app.models.applicant_work_experience import (
+    ApplicantWorkExperience,
+    ApplicantWorkExperienceBase,
+    ApplicantWorkExperienceRead,
+)
+from app.models.applicant_language_test import (
+    ApplicantLanguageTest,
+    ApplicantLanguageTestBase,
+    ApplicantLanguageTestRead,
+)
 
 
 if TYPE_CHECKING:
@@ -27,7 +35,7 @@ class ProfileVisibility(str, Enum):
 
 class ApplicantBase(SQLModel):
     """Base applicant fields shared between create/read/update."""
-    display_name: str = Field(max_length=100, description="Public name or anonymous alias")
+    display_name: Optional[str] = Field(default=None, max_length=100, description="Public name or anonymous alias")
     is_anonymous: bool = Field(default=False, description="Hide real identity")
     
     # Pricing for pay-to-read
@@ -35,11 +43,11 @@ class ApplicantBase(SQLModel):
     view_price: int = Field(default=20, description="Ghadams required to view full profile")
     
     # Academic background
-    university: str = Field(max_length=200, description="Home university name")
+    university: Optional[str] = Field(default=None, max_length=200, description="Home university name")
     faculty: Optional[str] = Field(default=None, max_length=200)
-    major: str = Field(max_length=200, description="Field of study / Course")
-    degree_level: str = Field(max_length=50, description="Bachelor's, Master's, PhD")
-    graduation_year: int = Field(ge=1990, le=2100)
+    major: Optional[str] = Field(default=None, max_length=200, description="Field of study / Course")
+    degree_level: Optional[str] = Field(default=None, max_length=50, description="Bachelor's, Master's, PhD")
+    graduation_year: Optional[int] = Field(default=None, ge=1990, le=2100)
     
     # GPA info - using string to preserve exact format (some use 4.0, others 20.0)
     overall_gpa: Optional[str] = Field(default=None, max_length=20, description="e.g., 3.8/4.0 or 18.5/20")
@@ -64,7 +72,7 @@ class Applicant(ApplicantBase, table=True):
     ghadams_earned: int = Field(default=0, description="Total ghadams earned from this profile")
     
     # Relationships
-    user: Optional["User"] = Relationship(back_populates="applicant")
+    user: Optional["User"] = Relationship()
     language_credentials: list["LanguageCredential"] = Relationship(back_populates="applicant")
     documents: list["Document"] = Relationship(back_populates="applicant")
     activities: list["ExtracurricularActivity"] = Relationship(back_populates="applicant")
@@ -99,6 +107,11 @@ class Applicant(ApplicantBase, table=True):
 
 class ApplicantCreate(ApplicantBase):
     """Schema for creating a new applicant."""
+    display_name: str = Field(max_length=100, description="Public name or anonymous alias")
+    university: str = Field(max_length=200, description="Home university name")
+    major: str = Field(max_length=200, description="Field of study / Course")
+    degree_level: str = Field(max_length=50, description="Bachelor's, Master's, PhD")
+    graduation_year: int = Field(ge=1990, le=2100)
     email: Optional[str] = Field(default=None, max_length=255)
 
 
@@ -118,11 +131,11 @@ class ApplicantRead(ApplicantBase):
 class ApplicantPreview(SQLModel):
     """Limited preview for non-subscribers."""
     id: int
-    display_name: str
-    university: str
-    major: str
-    degree_level: str
-    graduation_year: int
+    display_name: Optional[str]
+    university: Optional[str]
+    major: Optional[str]
+    degree_level: Optional[str]
+    graduation_year: Optional[int]
     is_premium: bool
     view_price: int
     total_views: int
@@ -204,8 +217,8 @@ class ApplicantOnboardingUpsert(BaseModel):
     overall_gpa_value: Optional[float] = None
     gpa_scale: Optional[str] = None
 
-    work_experiences: Optional[List[WorkExpIn]] = None
-    language_test: Optional[LanguageTestIn] = None
+    work_experiences: Optional[list[ApplicantWorkExperienceBase]] = None
+    language_test: Optional[ApplicantLanguageTestBase] = None
 
 # Import for type hints at runtime
 from app.models.language import LanguageCredentialRead

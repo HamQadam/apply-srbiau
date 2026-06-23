@@ -5,6 +5,7 @@ from sqlmodel import SQLModel, Field, Relationship
 
 if TYPE_CHECKING:
     from .course import Course
+    from .application import Application
 
 
 class UniversityBase(SQLModel):
@@ -42,6 +43,7 @@ class University(UniversityBase, table=True):
     
     # Relationships
     courses: List["Course"] = Relationship(back_populates="university")
+    applications: List["Application"] = Relationship(back_populates="university")
 
 
 class UniversityCreate(UniversityBase):
