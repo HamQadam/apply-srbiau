@@ -29,6 +29,8 @@ export interface MatchingProfile {
   preferred_countries: string[];
   budget_min?: number;
   budget_max?: number;
+  budget_currency?: Currency;
+  budget_max_eur?: number;
   preferred_degree_level?: string;
   target_intake?: string;
   language_preference?: string;
@@ -46,6 +48,8 @@ export interface MatchingOptions {
   intake_options: { value: string; label: string }[];
   degree_levels: string[];
   teaching_languages: string[];
+  gpa_scales?: string[];
+  budget_currencies?: Currency[];
 }
 
 export interface Recommendation {
@@ -65,6 +69,28 @@ export interface Recommendation {
   match_score: number;
   match_reasons: string[];
   warnings: string[];
+  match_explanations?: MatchExplanation[];
+}
+
+export interface MatchExplanation {
+  code: string;
+  kind: 'strength' | 'warning' | 'info';
+  label: string;
+  detail: string | null;
+  points: number;
+}
+
+export interface RecommendationRefinement {
+  code: string;
+  label: string;
+  detail: string;
+}
+
+export interface RecommendationThreshold {
+  max_results: number;
+  uncapped_total?: number;
+  capped: boolean;
+  too_many?: boolean;
 }
 
 export interface RecommendationsResponse {
@@ -77,7 +103,14 @@ export interface RecommendationsResponse {
     countries: string[];
     degree_level: string | null;
     budget_max: number | null;
+    budget_currency?: Currency | null;
+    budget_max_eur?: number | null;
+    language_preference?: string | null;
+    gpa?: number | null;
+    gpa_scale?: string | null;
   };
+  refinement_prompts?: RecommendationRefinement[];
+  result_threshold?: RecommendationThreshold;
 }
 
 export interface AuthResponse {
@@ -118,13 +151,36 @@ export interface Course {
   gpa_minimum: number | null;
   gre_required: boolean;
   scholarships_available: boolean;
+  scholarship_details?: string | null;
   program_url: string | null;
+  application_url?: string | null;
+  description?: string | null;
+  notes?: string | null;
+  deadline_notes?: string | null;
+  last_verified_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  view_count?: number;
   university_name?: string;
   university_country?: string;
   university_city?: string;
   university_ranking_qs?: number | null;
 }
 
+export interface CourseLanguageRequirement {
+  id: number;
+  course_id: number;
+  test_type: string;
+  minimum_overall: number | null;
+  minimum_reading: number | null;
+  minimum_writing: number | null;
+  minimum_speaking: number | null;
+  minimum_listening: number | null;
+  cefr_level: string | null;
+  certificate_level: string | null;
+  notes: string | null;
+  is_mandatory: boolean;
+}
 export interface CourseSummary {
   id: number;
   name: string;
@@ -150,14 +206,18 @@ export interface CourseSearchParams {
   country?: string;
   countries?: string[];
   degree_level?: DegreeLevel | '';
+  teaching_language?: TeachingLanguage | '';
+  max_tuition?: number;
   tuition_free_only?: boolean;
+  deadline_after?: string;
+  deadline_before?: string;
   limit?: number;
   offset?: number;
 }
 
 export type DegreeLevel = 'bachelor' | 'master' | 'phd' | 'diploma' | 'certificate';
-export type TeachingLanguage = 'english' | 'german' | 'french' | 'dutch' | 'spanish' | 'italian' | 'other';
-export type Currency = 'EUR' | 'USD' | 'CAD' | 'AUD' | 'GBP' | 'CHF';
+export type TeachingLanguage = 'english' | 'german' | 'french' | 'dutch' | 'spanish' | 'italian' | 'swedish' | 'norwegian' | 'danish' | 'finnish' | 'polish' | 'czech' | 'japanese' | 'chinese' | 'korean' | 'other';
+export type Currency = 'EUR' | 'USD' | 'CAD' | 'AUD' | 'GBP' | 'CHF' | 'SEK' | 'NOK' | 'DKK' | 'JPY' | 'CNY' | 'IRR';
 
 // Tracked Program
 export interface TrackedProgram {
@@ -174,6 +234,10 @@ export interface TrackedProgram {
   deadline: string | null;
   submitted_date: string | null;
   result_date: string | null;
+  interview_date?: string | null;
+  reminders_enabled?: boolean;
+  reminder_offsets_days?: number[] | null;
+  next_reminder_at?: string | null;
   // Sharing state (experience platform)
   shared_as_experience?: boolean;
   shared_experience_id?: number | null;
@@ -186,6 +250,10 @@ export interface TrackedProgram {
   scholarship_offered: boolean;
   scholarship_amount: number | null;
   match_score: number | null;
+  match_reasons?: string[] | null;
+  match_warnings?: string[] | null;
+  matching_profile_snapshot?: MatchingProfile | null;
+  recommendation_snapshot?: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
   // Joined data
@@ -208,7 +276,7 @@ export interface ChecklistItem {
   due_date?: string;
 }
 
-export type NoteCategory = 'important' | 'contact' | 'link' | 'reminder' | 'general';
+export type NoteCategory = 'important' | 'contact' | 'link' | 'reminder' | 'requirement' | 'deadline' | 'funding' | 'portal' | 'general';
 
 export interface NoteEntry {
   id: string;
@@ -224,6 +292,10 @@ export const NOTE_CATEGORIES: Record<NoteCategory, { labelKey: string; icon: str
   contact: { labelKey: 'notes.categories.contact', icon: '👤', color: 'bg-status-info/10 text-status-info border border-status-info/30' },
   link: { labelKey: 'notes.categories.link', icon: '🔗', color: 'bg-brand-secondary/10 text-brand-secondary border border-brand-secondary/30' },
   reminder: { labelKey: 'notes.categories.reminder', icon: '⏰', color: 'bg-status-warning/10 text-status-warning border border-status-warning/30' },
+  requirement: { labelKey: 'notes.categories.requirement', icon: '📋', color: 'bg-brand-primary/10 text-brand-primary border border-brand-primary/30' },
+  deadline: { labelKey: 'notes.categories.deadline', icon: '📅', color: 'bg-status-danger/10 text-status-danger border border-status-danger/30' },
+  funding: { labelKey: 'notes.categories.funding', icon: '💰', color: 'bg-brand-accent/10 text-brand-accent border border-brand-accent/30' },
+  portal: { labelKey: 'notes.categories.portal', icon: '🔐', color: 'bg-status-info/10 text-status-info border border-status-info/30' },
   general: { labelKey: 'notes.categories.general', icon: '📝', color: 'bg-elevated text-text-secondary border border-border' },
 };
 
@@ -259,6 +331,55 @@ export interface DeadlineItem {
   deadline: string;
   days_until: number;
   status: ApplicationStatus;
+  urgency?: 'overdue' | 'today' | 'urgent' | 'soon' | 'future';
+}
+
+export interface ReminderItem {
+  program_id: number;
+  program_name: string;
+  university_name: string;
+  reminder_date: string;
+  deadline: string;
+  offset_days: number;
+  days_until_deadline: number;
+  status: ApplicationStatus;
+}
+
+export interface PrintablePlan {
+  generated_at: string;
+  programs: Array<{
+    id: number;
+    program_name: string;
+    university_name: string;
+    country: string | null;
+    status: ApplicationStatus;
+    priority: Priority;
+    intake: IntakePeriod | null;
+    deadline: string | null;
+    submitted_date: string | null;
+    result_date: string | null;
+    interview_date: string | null;
+    application_portal_url: string | null;
+    application_id: string | null;
+    checklist: {
+      total: number;
+      completed: number;
+      required_total: number;
+      required_completed: number;
+      pending_documents: ChecklistItem[];
+      pending_required_documents: ChecklistItem[];
+    };
+    notes_count: number;
+    reminders_enabled: boolean;
+    reminder_offsets_days: number[];
+    next_reminder_at: string | null;
+    match_score: number | null;
+  }>;
+  summary: {
+    total_programs: number;
+    upcoming_deadlines_30_days: number;
+    pending_required_documents: number;
+  };
 }
 
 // Ghadam
@@ -287,9 +408,13 @@ export interface UpdateTrackedProgramRequest {
   status?: ApplicationStatus;
   priority?: Priority;
   intake?: IntakePeriod;
-  deadline?: string;
-  submitted_date?: string;
-  result_date?: string;
+  deadline?: string | null;
+  submitted_date?: string | null;
+  result_date?: string | null;
+  interview_date?: string | null;
+  reminders_enabled?: boolean;
+  reminder_offsets_days?: number[] | null;
+  next_reminder_at?: string | null;
   notes?: string;
   document_checklist?: ChecklistItem[];
   application_portal_url?: string;

@@ -6,7 +6,8 @@
     "loading": "صبر کن...",
     "maybeLater": "بعداً",
     "save": "ذخیره",
-    "saving": "یه لحظه..."
+    "saving": "یه لحظه...",
+    "confirm": "تایید"
   },
   "nav": {
     "dashboard": "داشبورد",
@@ -114,14 +115,19 @@
       "first": "پروفایلت رو کامل کن تا پیشنهادهای هوشمند بگیری",
       "second": "از چک‌لیست مدارک استفاده کن که چیزی یادت نره",
       "third": "بعد از نتیجه تجربه‌ات رو به اشتراک بذار و سکه بگیر"
-    }
+    },
+    "printPlan": "چاپ برنامه",
+    "exportError": "آماده‌سازی برنامه اپلای ممکن نشد.",
+    "confirmDeleteTitle": "این برنامه از ترکر حذف شود؟",
+    "confirmDeleteDescription": "با این کار {{name}} همراه با چک‌لیست و یادداشت‌هایش از ترکر حذف می‌شود."
   },
   "deadlines": {
     "empty": "تو ۳۰ روز آینده ددلاینی نداری 🎉",
     "today": "امروز",
     "tomorrow": "فردا",
     "daysAway_one": "{{count}} روز مونده",
-    "daysAway_other": "{{count}} روز مونده"
+    "daysAway_other": "{{count}} روز مونده",
+    "overdue": "{{count}} روز گذشته"
   },
   "degree": {
     "bachelor": "کارشناسی",
@@ -151,7 +157,10 @@
     "daysLeft_one": "{{count}} روز مونده",
     "daysLeft_other": "{{count}} روز مونده",
     "documents": "مدارک",
-    "remove": "حذف از لیست"
+    "remove": "حذف از لیست",
+    "setDeadline": "ثبت ددلاین",
+    "deadlineToday": "امروز ددلاین است",
+    "deadlineOverdue": "{{count}} روز گذشته"
   },
   "programDetail": {
     "back": "برگرد به داشبورد",
@@ -166,7 +175,10 @@
     "checklist": {
       "title": "چک‌لیست مدارک",
       "placeholder": "اسم مدرک...",
-      "addCustom": "اضافه کردن مورد جدید"
+      "addCustom": "اضافه کردن مورد جدید",
+      "required": "ضروری",
+      "optional": "اختیاری",
+      "requiredToggle": "مدرک ضروری"
     },
     "checklistUpdated": "چک‌لیست آپدیت شد",
     "checklistError": "آپدیت نشد",
@@ -181,7 +193,11 @@
       "intake": "ورودی",
       "notSet": "مشخص نشده",
       "notYet": "هنوز نه",
-      "pending": "منتظر نتیجه"
+      "pending": "منتظر نتیجه",
+      "interview": "مصاحبه",
+      "fromCatalogue": "از کاتالوگ",
+      "updated": "تاریخ به‌روزرسانی شد.",
+      "error": "به‌روزرسانی تاریخ ممکن نشد."
     },
     "notes": {
       "title": "یادداشت‌ها",
@@ -207,6 +223,18 @@
       "rejectedTitle": "هر مسیری یه چیز یاد می‌ده",
       "subtitle": "تجربه‌ات می‌تونه به بقیه کمک کنه. به اشتراک بذار و سکه بگیر!",
       "cta": "اشتراک تجربه (+۱۵۰ سکه)"
+    },
+    "printPlan": "چاپ برنامه اپلای",
+    "exportError": "آماده‌سازی برنامه اپلای ممکن نشد.",
+    "confirmRemoveTitle": "این برنامه حذف شود؟",
+    "confirmRemoveDescription": "با این کار {{name}} همراه با چک‌لیست و یادداشت‌هایش از ترکر حذف می‌شود.",
+    "reminders": {
+      "title": "یادآورهای ددلاین",
+      "subtitle": "مشخص کنید این برنامه چه زمانی در برنامه یادآورها دیده شود.",
+      "enabled": "فعال",
+      "daysBefore": "{{count}} روز قبل",
+      "saved": "تنظیمات یادآور ذخیره شد.",
+      "error": "به‌روزرسانی یادآورها ممکن نشد."
     }
   },
   "explore": {
@@ -228,7 +256,17 @@
       "searchCountries": "جستجوی کشور...",
       "searchFields": "جستجوی رشته...",
       "noCountries": "کشوری پیدا نشد",
-      "noFields": "رشته‌ای پیدا نشد"
+      "noFields": "رشته‌ای پیدا نشد",
+      "search": "جستجو",
+      "country": "کشور",
+      "field": "رشته",
+      "degree": "مقطع",
+      "language": "زبان",
+      "tuition": "شهریه",
+      "deadline": "ددلاین",
+      "allLanguages": "همه زبان‌ها",
+      "anyTuition": "هر شهریه‌ای",
+      "maxTuition": "تا {{amount}}"
     },
     "emptyTitle": "چیزی پیدا نشد 🔍",
     "emptySubtitle": "فیلترها رو عوض کن یا یه چیز دیگه سرچ کن",
@@ -243,7 +281,34 @@
       "deadline": "ددلاین {{date}}",
       "scholarships": "بورسیه"
     },
-    "qsRank": "QS #{{rank}}"
+    "qsRank": "QS #{{rank}}",
+    "details": "جزئیات",
+    "officialSource": "منبع رسمی",
+    "tooManyTitle": "{{count}} برنامه پیدا شد",
+    "tooManySubtitle": "قبل از مقایسه، با فیلتر کشور، رشته، مقطع، زبان، شهریه یا ددلاین لیست رو دقیق‌تر کن.",
+    "emptyFilteredTitle": "هیچ برنامه‌ای با این فیلترها پیدا نشد",
+    "emptyFilteredSubtitle": "یکی دو فیلتر رو بردار، بازه ددلاین رو بزرگ‌تر کن، یا رشته کلی‌تری رو جستجو کن.",
+    "active": {
+      "search": "جستجو: {{value}}",
+      "country": "کشور: {{value}}",
+      "field": "رشته: {{value}}",
+      "degree": "مقطع: {{value}}",
+      "language": "زبان: {{value}}",
+      "tuitionFree": "شهریه رایگان",
+      "maxTuition": "شهریه تا {{value}}"
+    },
+    "deadlines": {
+      "any": "هر ددلاینی",
+      "future": "ددلاین‌های آینده",
+      "next3": "۳ ماه آینده",
+      "next6": "۶ ماه آینده"
+    },
+    "freshness": {
+      "fresh": "به‌تازگی بررسی شده",
+      "aging": "بهتره سریع منبع رو چک کنی",
+      "stale": "قبل از اتکا حتماً بررسی کن",
+      "unknown": "تازگی داده نامشخصه"
+    }
   },
   "recommendations": {
     "title": "پیشنهادهای تو",
@@ -268,7 +333,38 @@
     "emptyTitle": "برنامه‌ای پیدا نشد",
     "emptySubtitle": "ترجیحاتت رو یکم عوض کن تا نتایج بیشتری ببینی",
     "budgetMax": "حداکثر {{amount}} در سال",
-    "bonusEarned": "{{amount}} سکه گام گرفتی! 🎁"
+    "bonusEarned": "{{amount}} سکه گام گرفتی! 🎁",
+    "tooManyTitle": "{{count}} گزینه احتمالی",
+    "tooManySubtitle": "لیست هنوز خیلی گسترده است. قبل از مقایسه، ترجیحاتت رو دقیق‌تر کن.",
+    "refineTitle": "پیشنهادها رو دقیق‌تر کن",
+    "refineSubtitle": "چند تغییر کوچک توی پروفایل می‌تونه نتیجه‌ها رو کاربردی‌تر کنه.",
+    "gpaSummary": "معدل {{gpa}} از {{scale}}",
+    "refinements": {
+      "broaden_country": {
+        "label": "کشورها رو بازتر کن",
+        "detail": "چند کشور نزدیک اضافه کن یا سخت‌گیری کشور رو کمتر کن."
+      },
+      "raise_budget": {
+        "label": "بودجه رو چک کن",
+        "detail": "خیلی از برنامه‌ها با فیلتر شهریه حذف می‌شن. سقف بالاتر یا مسیر رایگان رو بررسی کن."
+      },
+      "add_field_focus": {
+        "label": "رشته‌ها رو محدودتر کن",
+        "detail": "قبل از مقایسه، یک یا دو رشته اصلی رو انتخاب کن."
+      },
+      "add_budget_focus": {
+        "label": "بودجه رو دقیق‌تر کن",
+        "detail": "یک سقف شهریه سالانه واقعی بذار تا گزینه‌های بی‌ربط کمتر بشن."
+      },
+      "add_gpa": {
+        "label": "معدل ایرانی رو وارد کن",
+        "detail": "معدلت رو از ۲۰ وارد کن تا هشدارهای شرط معدل دقیق‌تر بشن."
+      },
+      "add_language": {
+        "label": "زبان تدریس رو انتخاب کن",
+        "detail": "ترجیح زبان کمک می‌کنه برنامه‌های انگلیسی از گزینه‌های زبان محلی جدا بشن."
+      }
+    }
   },
   "addProgram": {
     "title": "اضافه کردن برنامه",
@@ -382,7 +478,8 @@
       "subtitle": "بازه شهریه سالانه رو انتخاب کن",
       "freeHint": "خیلی از برنامه‌ها تو آلمان، نروژ و... رایگانن!",
       "scholarshipsTitle": "اولویت به برنامه‌های با بورسیه",
-      "scholarshipsSubtitle": "برنامه‌هایی که کمک مالی دارن رو برجسته می‌کنیم"
+      "scholarshipsSubtitle": "برنامه‌هایی که کمک مالی دارن رو برجسته می‌کنیم",
+      "currency": "واحد بودجه"
     },
     "timeline": {
       "title": "کی می‌خوای شروع کنی؟",
@@ -451,7 +548,11 @@
       "contact": "تماس",
       "link": "لینک",
       "reminder": "یادآور",
-      "general": "عمومی"
+      "general": "عمومی",
+      "requirement": "نیازمندی",
+      "deadline": "ددلاین",
+      "funding": "فاند",
+      "portal": "پرتال"
     }
   },
   "status": {
@@ -465,5 +566,53 @@
     "rejected": "رد شده",
     "withdrawn": "انصراف",
     "deferred": "به تعویق افتاده"
+  },
+  "language": {
+    "english": "انگلیسی",
+    "german": "آلمانی",
+    "french": "فرانسوی",
+    "dutch": "هلندی",
+    "spanish": "اسپانیایی",
+    "italian": "ایتالیایی",
+    "swedish": "سوئدی",
+    "norwegian": "نروژی",
+    "danish": "دانمارکی",
+    "finnish": "فنلاندی",
+    "polish": "لهستانی",
+    "czech": "چکی",
+    "japanese": "ژاپنی",
+    "chinese": "چینی",
+    "korean": "کره‌ای",
+    "other": "سایر"
+  },
+  "courseDetail": {
+    "loadError": "جزئیات برنامه لود نشد.",
+    "notFound": "این برنامه پیدا نشد.",
+    "backToExplore": "برگشت به کاوش",
+    "overview": "خلاصه",
+    "field": "رشته",
+    "tuition": "شهریه",
+    "duration": "مدت",
+    "deadlineFall": "ددلاین پاییز",
+    "deadlineSpring": "ددلاین بهار",
+    "gpa": "حداقل معدل",
+    "months_one": "{{count}} ماه",
+    "months_other": "{{count}} ماه",
+    "unknown": "ثبت نشده",
+    "freeTuition": "شهریه رایگان",
+    "details": "جزئیات",
+    "languageRequirements": "مدرک زبان",
+    "noLanguageRequirements": "هنوز شرط زبان ساختاریافته ثبت نشده. قبل از اپلای منبع رسمی رو چک کن.",
+    "source": "منبع و تازگی داده",
+    "freshness": "تازگی داده",
+    "officialProgram": "باز کردن صفحه رسمی برنامه",
+    "applicationPage": "باز کردن صفحه اپلیکیشن",
+    "scores": {
+      "overall": "کل",
+      "reading": "Reading",
+      "writing": "Writing",
+      "speaking": "Speaking",
+      "listening": "Listening"
+    }
   }
 }

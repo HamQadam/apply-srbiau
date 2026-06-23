@@ -42,6 +42,7 @@ from .tracked_program import (
     Priority,
     IntakePeriod,
     DEFAULT_CHECKLIST,
+    NOTE_CATEGORIES,
 )
 
 from .user import (
@@ -123,6 +124,14 @@ from .subscription import (
 from .applicant_work_experience import ApplicantWorkExperience
 from .applicant_language_test import ApplicantLanguageTest
 
+from .matching_profile import (
+    MatchingProfileModel,
+    MatchExplanation,
+    RecommendationRefinement,
+    RecommendationSnapshot,
+    BUDGET_TO_EUR_RATES,
+)
+
 
 __all__ = [
     # University
@@ -161,6 +170,7 @@ __all__ = [
     "Priority",
     "IntakePeriod",
     "DEFAULT_CHECKLIST",
+    "NOTE_CATEGORIES",
     # User
     "User",
     "UserBase",
@@ -219,4 +229,9 @@ __all__ = [
     # Applicant Extra
     "ApplicantWorkExperience",
     "ApplicantLanguageTest",
+    "MatchingProfileModel",
+    "MatchExplanation",
+    "RecommendationRefinement",
+    "RecommendationSnapshot",
+    "BUDGET_TO_EUR_RATES",
 ]

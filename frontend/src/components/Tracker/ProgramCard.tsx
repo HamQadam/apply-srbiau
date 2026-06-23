@@ -22,6 +22,20 @@ export function ProgramCard({ program, onStatusChange, onDelete }: ProgramCardPr
   const daysUntilDeadline = deadline
     ? Math.ceil((new Date(deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
     : null;
+  const deadlineClass = daysUntilDeadline === null
+    ? 'bg-elevated text-text-secondary'
+    : daysUntilDeadline <= 7
+    ? 'bg-status-danger/10 text-status-danger'
+    : daysUntilDeadline <= 30
+    ? 'bg-status-warning/10 text-status-warning'
+    : 'bg-elevated text-text-secondary';
+  const deadlineLabel = daysUntilDeadline === null
+    ? null
+    : daysUntilDeadline < 0
+    ? t('program.deadlineOverdue', { count: Math.abs(daysUntilDeadline) })
+    : daysUntilDeadline === 0
+    ? t('program.deadlineToday')
+    : t('program.daysLeft', { count: daysUntilDeadline });
   
   // Document progress
   const checklist = program.document_checklist || [];
@@ -92,24 +106,22 @@ export function ProgramCard({ program, onStatusChange, onDelete }: ProgramCardPr
         
         {/* Right side - Deadline & Actions */}
         <div className="text-end ms-4 flex flex-col items-end gap-2">
-          {deadline && (
-            <div
-              className={cn(
-                'px-3 py-1.5 rounded-xl text-sm font-medium',
-                daysUntilDeadline !== null && daysUntilDeadline <= 7
-                  ? 'bg-status-danger/10 text-status-danger'
-                  : daysUntilDeadline !== null && daysUntilDeadline <= 30
-                  ? 'bg-status-warning/10 text-status-warning'
-                  : 'bg-elevated text-text-secondary'
-              )}
-            >
+          {deadline ? (
+            <div className={cn('px-3 py-1.5 rounded-xl text-sm font-medium', deadlineClass)}>
               <div>
                 {formatDate(deadline, i18n.language, { month: 'short', day: 'numeric' })}
               </div>
-              {daysUntilDeadline !== null && daysUntilDeadline > 0 && (
-                <div className="text-xs opacity-75">{t('program.daysLeft', { count: daysUntilDeadline })}</div>
+              {deadlineLabel && (
+                <div className="text-xs opacity-75">{deadlineLabel}</div>
               )}
             </div>
+          ) : (
+            <Link
+              to={`/dashboard/programs/${program.id}`}
+              className="rounded-xl bg-elevated px-3 py-1.5 text-xs font-medium text-brand-primary hover:bg-brand-primary/10"
+            >
+              {t('program.setDeadline')}
+            </Link>
           )}
           
           <motion.button

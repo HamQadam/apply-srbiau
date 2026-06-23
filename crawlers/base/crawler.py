@@ -44,14 +44,27 @@ class CrawlError:
 
 @dataclass
 class CrawlResult:
-    """Result of processing a single item."""
+    """Result of fetching a single raw item from the source.
+
+    In the new two-phase pipeline the crawler's only job is to retrieve
+    the raw API payload and hand it to the IngestionEngine, which writes it
+    to raw_crawl_items.  Transformation happens later in postprocess/.
+
+    raw_payload  — the untouched dict as returned by the source API.
+    source_id    — the source's own identifier (used as the dedup key).
+
+    The legacy university_payload / course_payload fields are kept for
+    backward-compat but are no longer used by the engine.
+    """
     source_id: str
     status: CrawlStatus
+    raw_payload: dict[str, Any] | None = None
+    # Legacy fields kept to avoid breaking any external tooling
     university_payload: dict[str, Any] | None = None
     course_payload: dict[str, Any] | None = None
     error: CrawlError | None = None
     warnings: list[str] = field(default_factory=list)
-    
+
     @property
     def is_success(self) -> bool:
         return self.status in (CrawlStatus.SUCCESS, CrawlStatus.PARTIAL)

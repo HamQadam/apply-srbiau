@@ -22,6 +22,16 @@ from typing import Any
 log = logging.getLogger("crawler.db")
 
 
+# ---------------------------------------------------------------------------
+# Parse-status constants (shared between crawler writer and postprocess reader)
+# ---------------------------------------------------------------------------
+PARSE_STATUS_PENDING = "pending"
+PARSE_STATUS_PARSED = "parsed"
+PARSE_STATUS_NEEDS_LLM = "needs_llm"
+PARSE_STATUS_DONE = "done"
+PARSE_STATUS_FAILED = "failed"
+
+
 def _now_utc() -> datetime:
     return datetime.utcnow()
 
@@ -503,3 +513,193 @@ class PgStore:
                 )
             
             await asyncio.sleep(check_interval)
+
+
+# ---------------------------------------------------------------------------
+# RawStore — writes raw API payloads to raw_crawl_items before any parsing
+# ---------------------------------------------------------------------------
+
+class RawStore:
+    """
+    Lightweight store that writes raw crawler payloads to raw_crawl_items.
+
+    This is the ONLY write target for crawlers in the new pipeline.
+    All transformation / parsing happens downstream in postprocess jobs.
+
+    On re-crawl the row is UPDATED in place so we always have the freshest
+    raw payload while keeping the parse_status / course_id history intact —
+    unless the row has already been fully processed (parse_status='done'),
+    in which case we reset it to 'pending' so it gets re-parsed with the
+    fresh data.
+    """
+
+    TABLE = "raw_crawl_items"
+
+    def __init__(self, dsn: str, schema: str = "public", pool_max: int = 10):
+        self.dsn = dsn
+        self.schema = schema
+        self.pool_max = pool_max
+        self.pool: asyncpg.Pool | None = None
+
+    async def aopen(self) -> None:
+        log.info("RawStore: opening connection pool (max=%d)", self.pool_max)
+        self.pool = await asyncpg.create_pool(
+            self.dsn,
+            min_size=1,
+            max_size=self.pool_max,
+        )
+
+    async def aclose(self) -> None:
+        if self.pool:
+            log.info("RawStore: closing connection pool")
+            await self.pool.close()
+            self.pool = None
+
+    # Convenience aliases so callers can use either convention
+    async def open(self) -> None:
+        await self.aopen()
+
+    async def close(self) -> None:
+        await self.aclose()
+
+    async def wait_until_ready(self, timeout_s: int = 120) -> None:
+        """Block until raw_crawl_items table exists."""
+        assert self.pool, "Call aopen() before wait_until_ready()"
+        import time as _time
+
+        deadline = _time.monotonic() + timeout_s
+        tbl = f"{self.schema}.{self.TABLE}"
+
+        while True:
+            async with self.pool.acquire() as conn:
+                dbname = await conn.fetchval("SELECT current_database()")
+                ok = await conn.fetchval("SELECT to_regclass($1)", tbl)
+                if ok:
+                    log.info("RawStore ready: %s (%s found)", dbname, self.TABLE)
+                    return
+                log.info("[raw_store] Waiting for %s in db=%s …", self.TABLE, dbname)
+
+            if _time.monotonic() > deadline:
+                raise RuntimeError(
+                    f"RawStore: {self.TABLE} not found after {timeout_s}s"
+                )
+            await asyncio.sleep(2)
+
+    async def upsert(
+        self,
+        source: str,
+        source_id: str,
+        raw_data: dict[str, Any],
+    ) -> int:
+        """
+        Insert or update a raw crawl item.
+
+        - New rows are inserted with parse_status='pending'.
+        - Existing rows get their raw_data + crawled_at refreshed.
+          If they were previously 'done' they are reset to 'pending'
+          so the parse pipeline re-processes the fresh payload.
+
+        Returns the row id.
+        """
+        import json as _json
+
+        assert self.pool
+
+        raw_json = _json.dumps(raw_data, default=str)
+
+        async with self.pool.acquire() as conn:
+            row = await conn.fetchrow(
+                f"""
+                INSERT INTO {self.schema}.{self.TABLE}
+                    (source, source_id, raw_data, crawled_at, parse_status)
+                VALUES ($1, $2, $3::jsonb, now(), 'pending')
+                ON CONFLICT (source, source_id) DO UPDATE
+                    SET raw_data    = EXCLUDED.raw_data,
+                        crawled_at  = now(),
+                        -- Reset to pending when re-crawled so the parse job
+                        -- picks it up again with fresh data.
+                        -- Keep 'parsed'/'needs_llm' so in-flight jobs aren't
+                        -- interrupted; only reset truly finished rows.
+                        parse_status = CASE
+                            WHEN {self.schema}.{self.TABLE}.parse_status = 'done'
+                            THEN 'pending'
+                            ELSE {self.schema}.{self.TABLE}.parse_status
+                        END,
+                        parse_error  = CASE
+                            WHEN {self.schema}.{self.TABLE}.parse_status = 'done'
+                            THEN NULL
+                            ELSE {self.schema}.{self.TABLE}.parse_error
+                        END,
+                        missing_fields = CASE
+                            WHEN {self.schema}.{self.TABLE}.parse_status = 'done'
+                            THEN NULL
+                            ELSE {self.schema}.{self.TABLE}.missing_fields
+                        END,
+                        parsed_at   = CASE
+                            WHEN {self.schema}.{self.TABLE}.parse_status = 'done'
+                            THEN NULL
+                            ELSE {self.schema}.{self.TABLE}.parsed_at
+                        END
+                RETURNING id
+                """,
+                source,
+                source_id,
+                raw_json,
+            )
+            return int(row["id"])
+
+    async def upsert_batch(
+        self,
+        items: list[tuple[str, str, dict[str, Any]]],
+    ) -> list[int]:
+        """
+        Batch upsert a list of (source, source_id, raw_data) tuples.
+        Wraps all inserts in a single transaction.
+        Returns list of row ids in the same order.
+        """
+        import json as _json
+
+        assert self.pool
+        ids: list[int] = []
+
+        async with self.pool.acquire() as conn:
+            async with conn.transaction():
+                for source, source_id, raw_data in items:
+                    raw_json = _json.dumps(raw_data, default=str)
+                    row = await conn.fetchrow(
+                        f"""
+                        INSERT INTO {self.schema}.{self.TABLE}
+                            (source, source_id, raw_data, crawled_at, parse_status)
+                        VALUES ($1, $2, $3::jsonb, now(), 'pending')
+                        ON CONFLICT (source, source_id) DO UPDATE
+                            SET raw_data    = EXCLUDED.raw_data,
+                                crawled_at  = now(),
+                                parse_status = CASE
+                                    WHEN {self.schema}.{self.TABLE}.parse_status = 'done'
+                                    THEN 'pending'
+                                    ELSE {self.schema}.{self.TABLE}.parse_status
+                                END,
+                                parse_error  = CASE
+                                    WHEN {self.schema}.{self.TABLE}.parse_status = 'done'
+                                    THEN NULL
+                                    ELSE {self.schema}.{self.TABLE}.parse_error
+                                END,
+                                missing_fields = CASE
+                                    WHEN {self.schema}.{self.TABLE}.parse_status = 'done'
+                                    THEN NULL
+                                    ELSE {self.schema}.{self.TABLE}.missing_fields
+                                END,
+                                parsed_at   = CASE
+                                    WHEN {self.schema}.{self.TABLE}.parse_status = 'done'
+                                    THEN NULL
+                                    ELSE {self.schema}.{self.TABLE}.parsed_at
+                                END
+                        RETURNING id
+                        """,
+                        source,
+                        source_id,
+                        raw_json,
+                    )
+                    ids.append(int(row["id"]))
+
+        return ids

@@ -6,9 +6,10 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { trackerApi } from '../../api/services';
 import { PageTransition } from '../../components/Transitions/PageTransition';
 import { Skeleton } from '../../components/Feedback/Skeleton';
+import { ConfirmDialog } from '../../components/Feedback/ConfirmDialog';
 import { cn } from '../../lib/cn';
 import { formatDate } from '../../lib/format';
-import type { TrackedProgram, ApplicationStatus, NoteEntry } from '../../types';
+import type { TrackedProgram, ApplicationStatus, NoteEntry, UpdateTrackedProgramRequest } from '../../types';
 import { STATUS_LABELS, STATUS_COLORS, PRIORITY_LABELS, PRIORITY_COLORS, NOTE_CATEGORIES, getMatchScoreColor } from '../../types';
 
 export function ProgramDetailPage() {
@@ -18,6 +19,7 @@ export function ProgramDetailPage() {
   const [program, setProgram] = useState<TrackedProgram | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
   // Notes state
   const [editingNotes, setEditingNotes] = useState(false);
@@ -30,6 +32,7 @@ export function ProgramDetailPage() {
   // Checklist state
   const [showAddItem, setShowAddItem] = useState(false);
   const [newItemName, setNewItemName] = useState('');
+  const [newItemRequired, setNewItemRequired] = useState(true);
   
   useEffect(() => {
     loadProgram();
@@ -88,9 +91,10 @@ export function ProgramDetailPage() {
     if (!program || !newItemName.trim()) return;
     setSaving(true);
     try {
-      const updated = await trackerApi.addChecklistItem(program.id, { name: newItemName.trim() });
-      setProgram(updated);
+      const updated = await trackerApi.addChecklistItem(program.id, { name: newItemName.trim(), required: newItemRequired });
+      setProgram({ ...program, document_checklist: updated.document_checklist });
       setNewItemName('');
+      setNewItemRequired(true);
       setShowAddItem(false);
       toast.success(t('programDetail.itemAdded'));
     } catch (err) {
@@ -106,7 +110,7 @@ export function ProgramDetailPage() {
     setSaving(true);
     try {
       const updated = await trackerApi.deleteChecklistItem(program.id, itemId);
-      setProgram(updated);
+      setProgram({ ...program, document_checklist: updated.document_checklist });
       toast.success(t('programDetail.itemRemoved'));
     } catch (err) {
       console.error('Failed to delete item:', err);
@@ -187,7 +191,8 @@ export function ProgramDetailPage() {
   };
   
   const handleDelete = async () => {
-    if (!program || !confirm(t('programDetail.confirmRemove'))) return;
+    if (!program) return;
+    setSaving(true);
     try {
       await trackerApi.deleteProgram(program.id);
       toast.success(t('programDetail.programRemoved'));
@@ -195,6 +200,70 @@ export function ProgramDetailPage() {
     } catch (err) {
       console.error('Failed to delete:', err);
       toast.error(t('programDetail.programRemoveError'));
+    } finally {
+      setSaving(false);
+      setShowDeleteConfirm(false);
+    }
+  };
+
+  const handleDateUpdate = async (field: 'deadline' | 'submitted_date' | 'result_date' | 'interview_date', value: string) => {
+    if (!program) return;
+    const payload = { [field]: value || null } as UpdateTrackedProgramRequest;
+    setSaving(true);
+    try {
+      const updated = await trackerApi.updateProgram(program.id, payload);
+      setProgram(updated);
+      toast.success(t('programDetail.dates.updated'));
+    } catch (err) {
+      console.error('Failed to update date:', err);
+      toast.error(t('programDetail.dates.error'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleReminderToggle = async (enabled: boolean) => {
+    if (!program) return;
+    setSaving(true);
+    try {
+      const updated = await trackerApi.updateProgram(program.id, { reminders_enabled: enabled });
+      setProgram(updated);
+      toast.success(t('programDetail.reminders.saved'));
+    } catch (err) {
+      console.error('Failed to update reminders:', err);
+      toast.error(t('programDetail.reminders.error'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleReminderOffsetToggle = async (offset: number) => {
+    if (!program) return;
+    const current = program.reminder_offsets_days?.length ? program.reminder_offsets_days : [30, 14, 7, 1];
+    const next = current.includes(offset)
+      ? current.filter((item) => item !== offset)
+      : [...current, offset].sort((a, b) => b - a);
+    setSaving(true);
+    try {
+      const updated = await trackerApi.updateProgram(program.id, { reminder_offsets_days: next });
+      setProgram(updated);
+      toast.success(t('programDetail.reminders.saved'));
+    } catch (err) {
+      console.error('Failed to update reminder offsets:', err);
+      toast.error(t('programDetail.reminders.error'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handlePrintPlan = async () => {
+    if (!program) return;
+    try {
+      await trackerApi.getPrintablePlan(program.id);
+      window.print();
+    } catch (err) {
+      console.error('Failed to prepare printable plan:', err);
+      toast.error(t('programDetail.exportError'));
     }
   };
   
@@ -226,11 +295,12 @@ export function ProgramDetailPage() {
   const programName = program.program_name || program.custom_program_name || t('program.unknown');
   const universityName = program.university_name || program.custom_university_name || t('program.unknownUniversity');
   const country = program.country || program.custom_country || '';
-  const deadline = program.deadline || program.program_deadline;
   
   const completedItems = program.document_checklist?.filter(item => item.completed).length || 0;
   const totalItems = program.document_checklist?.length || 0;
   const progressPercent = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
+  const reminderOffsets = program.reminder_offsets_days?.length ? program.reminder_offsets_days : [30, 14, 7, 1];
+  const reminderOptions = [30, 14, 7, 1];
   
   // Sort note entries: pinned first, then by date
   const sortedNoteEntries = [...noteEntries].sort((a, b) => {
@@ -285,11 +355,22 @@ export function ProgramDetailPage() {
           </div>
           
           <div className="flex items-center gap-3">
+            <motion.button
+              onClick={handlePrintPlan}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="p-2 text-text-muted hover:text-brand-primary rounded-xl hover:bg-elevated transition-colors"
+              title={t('programDetail.printPlan')}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6v-8z" />
+              </svg>
+            </motion.button>
             <span className={cn('px-3 py-1.5 rounded-xl text-sm font-medium', PRIORITY_COLORS[program.priority])}>
               {t(PRIORITY_LABELS[program.priority])}
             </span>
             <motion.button
-              onClick={handleDelete}
+              onClick={() => setShowDeleteConfirm(true)}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               className="text-text-muted hover:text-status-danger p-2 hover:bg-status-danger/10 rounded-lg transition-colors"
@@ -329,40 +410,72 @@ export function ProgramDetailPage() {
         </div>
         
         {/* Important Dates */}
-        <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="p-4 bg-elevated rounded-xl border border-border">
-            <div className="text-xs text-text-muted uppercase font-medium">{t('programDetail.dates.deadline')}</div>
-            <div className="text-sm font-semibold text-text-primary mt-1">
-              {deadline
-                ? formatDate(deadline, i18n.language, {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric',
-                  })
-                : t('programDetail.dates.notSet')}
+        <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[
+            { field: 'deadline' as const, label: t('programDetail.dates.deadline'), value: program.deadline || '', inheritedValue: !program.deadline ? program.program_deadline : null },
+            { field: 'submitted_date' as const, label: t('programDetail.dates.submitted'), value: program.submitted_date || '', inheritedValue: null },
+            { field: 'result_date' as const, label: t('programDetail.dates.result'), value: program.result_date || '', inheritedValue: null },
+            { field: 'interview_date' as const, label: t('programDetail.dates.interview'), value: program.interview_date || '', inheritedValue: null },
+          ].map((item) => {
+            const displayValue = item.value || item.inheritedValue;
+            return (
+              <div key={item.field} className="p-4 bg-elevated rounded-xl border border-border">
+                <div className="text-xs text-text-muted uppercase font-medium">{item.label}</div>
+                <div className="text-sm font-semibold text-text-primary mt-1 min-h-[20px]">
+                  {displayValue
+                    ? formatDate(displayValue as string, i18n.language, { year: 'numeric', month: 'short', day: 'numeric' })
+                    : t('programDetail.dates.notSet')}
+                </div>
+                {item.inheritedValue && !item.value && (
+                  <div className="mt-1 text-[11px] text-text-muted">{t('programDetail.dates.fromCatalogue')}</div>
+                )}
+                <input
+                  type="date"
+                  value={item.value}
+                  onChange={(event) => handleDateUpdate(item.field, event.target.value)}
+                  disabled={saving}
+                  className="mt-3 w-full rounded-lg border border-border bg-background px-2 py-1.5 text-xs text-text-secondary focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
+                  aria-label={item.label}
+                />
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="mt-4 rounded-xl border border-border bg-elevated p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="text-sm font-semibold text-text-primary">{t('programDetail.reminders.title')}</div>
+              <div className="text-xs text-text-muted mt-0.5">{t('programDetail.reminders.subtitle')}</div>
             </div>
+            <label className="inline-flex items-center gap-2 text-sm text-text-secondary">
+              <input
+                type="checkbox"
+                checked={program.reminders_enabled !== false}
+                onChange={(event) => handleReminderToggle(event.target.checked)}
+                disabled={saving}
+                className="h-4 w-4 rounded border-border text-brand-primary focus:ring-brand-primary"
+              />
+              {t('programDetail.reminders.enabled')}
+            </label>
           </div>
-          <div className="p-4 bg-elevated rounded-xl border border-border">
-            <div className="text-xs text-text-muted uppercase font-medium">{t('programDetail.dates.submitted')}</div>
-            <div className="text-sm font-semibold text-text-primary mt-1">
-              {program.submitted_date
-                ? formatDate(program.submitted_date, i18n.language, { month: 'short', day: 'numeric' })
-                : t('programDetail.dates.notYet')}
-            </div>
-          </div>
-          <div className="p-4 bg-elevated rounded-xl border border-border">
-            <div className="text-xs text-text-muted uppercase font-medium">{t('programDetail.dates.result')}</div>
-            <div className="text-sm font-semibold text-text-primary mt-1">
-              {program.result_date
-                ? formatDate(program.result_date, i18n.language, { month: 'short', day: 'numeric' })
-                : t('programDetail.dates.pending')}
-            </div>
-          </div>
-          <div className="p-4 bg-elevated rounded-xl border border-border">
-            <div className="text-xs text-text-muted uppercase font-medium">{t('programDetail.dates.intake')}</div>
-            <div className="text-sm font-semibold text-text-primary mt-1">
-              {program.intake ? t(`intake.${program.intake}`) : t('programDetail.dates.notSet')}
-            </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {reminderOptions.map((offset) => (
+              <button
+                key={offset}
+                type="button"
+                onClick={() => handleReminderOffsetToggle(offset)}
+                disabled={saving || program.reminders_enabled === false}
+                className={cn(
+                  'rounded-lg px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50',
+                  reminderOffsets.includes(offset)
+                    ? 'bg-brand-primary text-white'
+                    : 'bg-surface text-text-secondary hover:bg-border'
+                )}
+              >
+                {t('programDetail.reminders.daysBefore', { count: offset })}
+              </button>
+            ))}
           </div>
         </div>
       </div>
@@ -408,10 +521,22 @@ export function ProgramDetailPage() {
                     onChange={(e) => handleChecklistChange(index, e.target.checked)}
                     className="w-5 h-5 text-brand-primary rounded-lg border-border focus:ring-brand-primary"
                   />
-                  <span className={`ms-3 ${item.completed ? 'text-text-muted line-through' : 'text-text-primary'}`}>
-                    {item.name}
-                    {item.required && !item.completed && (
-                      <span className="text-status-danger ms-1">*</span>
+                  <span className={`ms-3 flex flex-wrap items-center gap-2 ${item.completed ? 'text-text-muted line-through' : 'text-text-primary'}`}>
+                    <span>{item.name}</span>
+                    <span
+                      className={cn(
+                        'rounded-md px-2 py-0.5 text-[11px] font-medium no-underline',
+                        item.required
+                          ? 'bg-status-danger/10 text-status-danger'
+                          : 'bg-elevated text-text-muted border border-border'
+                      )}
+                    >
+                      {item.required ? t('programDetail.checklist.required') : t('programDetail.checklist.optional')}
+                    </span>
+                    {item.due_date && (
+                      <span className="text-[11px] text-text-muted no-underline">
+                        {formatDate(item.due_date, i18n.language, { month: 'short', day: 'numeric' })}
+                      </span>
                     )}
                   </span>
                 </label>
@@ -443,9 +568,18 @@ export function ProgramDetailPage() {
                 onKeyDown={(e) => e.key === 'Enter' && handleAddChecklistItem()}
                 autoFocus
               />
+              <label className="mt-3 inline-flex items-center gap-2 text-sm text-text-secondary">
+                <input
+                  type="checkbox"
+                  checked={newItemRequired}
+                  onChange={(event) => setNewItemRequired(event.target.checked)}
+                  className="h-4 w-4 rounded border-border text-brand-primary focus:ring-brand-primary"
+                />
+                {t('programDetail.checklist.requiredToggle')}
+              </label>
               <div className="flex justify-end gap-2 mt-2">
                 <motion.button
-                  onClick={() => { setShowAddItem(false); setNewItemName(''); }}
+                  onClick={() => { setShowAddItem(false); setNewItemName(''); setNewItemRequired(true); }}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.97 }}
                   className="px-3 py-1.5 text-text-muted hover:text-text-primary text-sm"
@@ -543,7 +677,7 @@ export function ProgramDetailPage() {
           {/* Add Note Entry Form */}
           {showAddNote && (
             <div className="mb-4 p-4 bg-brand-primary/10 rounded-xl border border-brand-primary/20">
-              <div className="flex gap-2 mb-3">
+              <div className="flex flex-wrap gap-2 mb-3">
                 {Object.entries(NOTE_CATEGORIES).map(([key, { icon, labelKey, color }]) => (
                   <motion.button
                     key={key}
@@ -658,6 +792,17 @@ export function ProgramDetailPage() {
         </div>
       </div>
       
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        title={t('programDetail.confirmRemoveTitle')}
+        description={t('programDetail.confirmRemoveDescription', { name: programName })}
+        confirmLabel={t('common.delete')}
+        destructive
+        busy={saving}
+        onCancel={() => setShowDeleteConfirm(false)}
+        onConfirm={handleDelete}
+      />
+
       {/* Share Journey Prompt */}
       {(program.status === 'accepted' || program.status === 'rejected') && !Boolean(program.shared_as_experience) && (
         <div className="mt-6 bg-gradient-to-r from-status-warning/10 to-brand-accent/10 rounded-2xl border border-status-warning/30 p-6">

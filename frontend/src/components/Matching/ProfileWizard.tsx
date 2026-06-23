@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { matchingApi } from '../../api/services';
 import { Spinner } from '../Feedback/Spinner';
 import { cn } from '../../lib/cn';
-import type { MatchingOptions, MatchingProfile } from '../../types';
+import type { Currency, MatchingOptions, MatchingProfile } from '../../types';
 
 interface ProfileWizardProps {
   onComplete: (profile: MatchingProfile, bonusAwarded: number) => void;
@@ -28,14 +28,15 @@ export const ProfileWizard: React.FC<ProfileWizardProps> = ({ onComplete, onSkip
   const [selectedFields, setSelectedFields] = useState<string[]>(initialProfile?.preferred_fields || []);
   const [selectedCountries, setSelectedCountries] = useState<string[]>(initialProfile?.preferred_countries || []);
   const [budgetRange, setBudgetRange] = useState<string>('medium');
+  const [budgetCurrency, setBudgetCurrency] = useState<Currency>(initialProfile?.budget_currency || 'EUR');
   const [preferScholarships, setPreferScholarships] = useState(initialProfile?.prefer_scholarships || false);
-  const [degreeLevel, setDegreeLevel] = useState(initialProfile?.preferred_degree_level || 'Master');
+  const [degreeLevel, setDegreeLevel] = useState(initialProfile?.preferred_degree_level || 'MASTER');
   const [targetIntake, setTargetIntake] = useState(initialProfile?.target_intake || 'fall_2026');
-  const [languagePreference, setLanguagePreference] = useState(initialProfile?.language_preference || 'English');
+  const [languagePreference, setLanguagePreference] = useState(initialProfile?.language_preference || 'english');
   const [greScore, setGreScore] = useState<number | undefined>(initialProfile?.gre_score);
   const [gmatScore, setGmatScore] = useState<number | undefined>(initialProfile?.gmat_score);
   const [gpa, setGpa] = useState<number | undefined>(initialProfile?.gpa);
-  const [gpaScale, setGpaScale] = useState(initialProfile?.gpa_scale || '4.0');
+  const [gpaScale, setGpaScale] = useState(initialProfile?.gpa_scale || '20');
   const [fieldQuery, setFieldQuery] = useState('');
   const [countryQuery, setCountryQuery] = useState('');
   const [showAllFields, setShowAllFields] = useState(false);
@@ -127,6 +128,7 @@ export const ProfileWizard: React.FC<ProfileWizardProps> = ({ onComplete, onSkip
       preferred_countries: selectedCountries,
       budget_min: budgetValues.min,
       budget_max: budgetValues.max,
+      budget_currency: budgetCurrency,
       preferred_degree_level: degreeLevel,
       target_intake: targetIntake,
       language_preference: languagePreference,
@@ -359,7 +361,19 @@ export const ProfileWizard: React.FC<ProfileWizardProps> = ({ onComplete, onSkip
                     </motion.button>
                   ))}
                 </div>
-                <div className="mt-6">
+                <div className="mt-6 grid gap-3 sm:grid-cols-[1fr_auto]">
+                  <label className="block">
+                    <span className="block text-sm font-medium text-text-secondary mb-2">{t('wizard.budget.currency')}</span>
+                    <select
+                      value={budgetCurrency}
+                      onChange={(e) => setBudgetCurrency(e.target.value as Currency)}
+                      className="w-full p-3 border border-border rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary bg-background"
+                    >
+                      {(options.budget_currencies || ['EUR']).map((currency) => (
+                        <option key={currency} value={currency}>{currency}</option>
+                      ))}
+                    </select>
+                  </label>
                   <label className="flex items-center gap-3 p-4 bg-status-warning/10 rounded-xl cursor-pointer">
                     <input
                       type="checkbox"
@@ -400,7 +414,7 @@ export const ProfileWizard: React.FC<ProfileWizardProps> = ({ onComplete, onSkip
                             : 'bg-elevated text-text-secondary hover:bg-elevated/80'
                         )}
                       >
-                        {level}
+                        {t(`degree.${level.toLowerCase()}`)}
                       </motion.button>
                     ))}
                   </div>
@@ -457,7 +471,7 @@ export const ProfileWizard: React.FC<ProfileWizardProps> = ({ onComplete, onSkip
                               : 'bg-elevated text-text-secondary hover:bg-elevated/80'
                           )}
                         >
-                          {lang}
+                          {t(`language.${lang}`)}
                         </motion.button>
                       ))}
                     </div>

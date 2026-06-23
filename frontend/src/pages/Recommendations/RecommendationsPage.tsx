@@ -18,6 +18,8 @@ export const RecommendationsPage: React.FC = () => {
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [total, setTotal] = useState(0);
   const [profileSummary, setProfileSummary] = useState<RecommendationsResponse['profile_summary'] | null>(null);
+  const [refinementPrompts, setRefinementPrompts] = useState<RecommendationsResponse['refinement_prompts']>([]);
+  const [resultThreshold, setResultThreshold] = useState<RecommendationsResponse['result_threshold'] | null>(null);
   const [showWizard, setShowWizard] = useState(false);
   const [tracking, setTracking] = useState<number | null>(null);
   const [offset, setOffset] = useState(0);
@@ -54,6 +56,8 @@ export const RecommendationsPage: React.FC = () => {
       }
       setTotal(data.total);
       setProfileSummary(data.profile_summary);
+      setRefinementPrompts(data.refinement_prompts || []);
+      setResultThreshold(data.result_threshold || null);
       setOffset(newOffset);
     } catch (err) {
       console.error('Error loading recommendations:', err);
@@ -147,6 +151,35 @@ export const RecommendationsPage: React.FC = () => {
           </motion.button>
         </div>
         
+        {resultThreshold?.too_many && (
+          <div className="bg-status-warning/10 border border-status-warning/30 rounded-2xl p-4 mb-6">
+            <p className="font-medium text-text-primary">{t('recommendations.tooManyTitle', { count: resultThreshold.uncapped_total || total })}</p>
+            <p className="text-sm text-text-muted mt-1">{t('recommendations.tooManySubtitle')}</p>
+          </div>
+        )}
+
+        {refinementPrompts && refinementPrompts.length > 0 && (
+          <div className="bg-surface rounded-2xl shadow-sm p-4 mb-6 border border-border">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
+              <div>
+                <h2 className="font-semibold text-text-primary">{t('recommendations.refineTitle')}</h2>
+                <p className="text-sm text-text-muted">{t('recommendations.refineSubtitle')}</p>
+              </div>
+              <button onClick={() => setShowWizard(true)} className="text-sm font-medium text-brand-primary hover:text-brand-secondary">
+                {t('recommendations.updatePreferences')}
+              </button>
+            </div>
+            <div className="grid gap-3 md:grid-cols-3">
+              {refinementPrompts.map((prompt) => (
+                <div key={prompt.code} className="rounded-xl bg-elevated p-3">
+                  <p className="text-sm font-medium text-text-primary">{t(`recommendations.refinements.${prompt.code}.label`, { defaultValue: prompt.label })}</p>
+                  <p className="text-xs text-text-muted mt-1">{t(`recommendations.refinements.${prompt.code}.detail`, { defaultValue: prompt.detail })}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Profile Summary */}
         {profileSummary && (
           <div className="bg-surface rounded-2xl shadow-sm p-4 mb-6 flex flex-wrap gap-2">
@@ -162,7 +195,17 @@ export const RecommendationsPage: React.FC = () => {
             ))}
             {profileSummary.degree_level && (
               <span className="px-3 py-1 bg-status-info/10 text-status-info rounded-full text-sm">
-                🎓 {profileSummary.degree_level}
+                {t(`degree.${profileSummary.degree_level.toLowerCase()}`)}
+              </span>
+            )}
+            {profileSummary.language_preference && (
+              <span className="px-3 py-1 bg-elevated text-text-secondary rounded-full text-sm">
+                {t(`language.${profileSummary.language_preference}`)}
+              </span>
+            )}
+            {profileSummary.gpa && (
+              <span className="px-3 py-1 bg-elevated text-text-secondary rounded-full text-sm">
+                {t('recommendations.gpaSummary', { gpa: profileSummary.gpa, scale: profileSummary.gpa_scale })}
               </span>
             )}
             {profileSummary.budget_max && profileSummary.budget_max < 999999 && (
@@ -239,12 +282,25 @@ export const RecommendationsPage: React.FC = () => {
                 </div>
                 
                 {/* Match Reasons */}
-                <div className="space-y-1 mb-4">
-                  {rec.match_reasons.slice(0, 3).map((reason, i) => (
-                    <p key={i} className="text-sm text-status-success">{reason}</p>
-                  ))}
-                  {rec.warnings.slice(0, 2).map((warning, i) => (
-                    <p key={i} className="text-sm text-status-warning">{warning}</p>
+                <div className="space-y-2 mb-4">
+                  {(rec.match_explanations && rec.match_explanations.length > 0
+                    ? rec.match_explanations.slice(0, 5)
+                    : [
+                        ...rec.match_reasons.slice(0, 3).map((label) => ({ label, kind: 'strength' as const, detail: null, points: 0, code: label })),
+                        ...rec.warnings.slice(0, 2).map((label) => ({ label, kind: 'warning' as const, detail: null, points: 0, code: label })),
+                      ]
+                  ).map((item) => (
+                    <div key={`${rec.id}-${item.code}-${item.label}`} className="rounded-lg bg-elevated px-3 py-2">
+                      <div className="flex items-start justify-between gap-3">
+                        <p className={item.kind === 'warning' ? 'text-sm text-status-warning' : item.kind === 'info' ? 'text-sm text-text-muted' : 'text-sm text-status-success'}>
+                          {item.label}
+                        </p>
+                        {item.points !== 0 && (
+                          <span className="text-xs text-text-muted whitespace-nowrap">{item.points > 0 ? `+${item.points}` : item.points}</span>
+                        )}
+                      </div>
+                      {item.detail && <p className="text-xs text-text-muted mt-1">{item.detail}</p>}
+                    </div>
                   ))}
                 </div>
                 

@@ -6,7 +6,8 @@
     "loading": "Loading...",
     "maybeLater": "Maybe later",
     "save": "Save",
-    "saving": "Saving..."
+    "saving": "Saving...",
+    "confirm": "Confirm"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -114,14 +115,19 @@
       "first": "Complete your profile to get AI-powered program matches",
       "second": "Use the document checklist to stay organized",
       "third": "Share your journey after results to earn coins"
-    }
+    },
+    "printPlan": "Print plan",
+    "exportError": "Could not prepare the application plan.",
+    "confirmDeleteTitle": "Remove tracked program?",
+    "confirmDeleteDescription": "This will remove {{name}} from your tracker, including its checklist and notes."
   },
   "deadlines": {
     "empty": "No upcoming deadlines in the next 30 days",
     "today": "Today",
     "tomorrow": "Tomorrow",
     "daysAway_one": "{{count}} day",
-    "daysAway_other": "{{count}} days"
+    "daysAway_other": "{{count}} days",
+    "overdue": "{{count}}d overdue"
   },
   "degree": {
     "bachelor": "Bachelor",
@@ -151,7 +157,10 @@
     "daysLeft_one": "{{count}} day left",
     "daysLeft_other": "{{count}} days left",
     "documents": "Documents",
-    "remove": "Remove from tracker"
+    "remove": "Remove from tracker",
+    "setDeadline": "Set deadline",
+    "deadlineToday": "Due today",
+    "deadlineOverdue": "{{count}}d overdue"
   },
   "programDetail": {
     "back": "Back to Dashboard",
@@ -166,7 +175,10 @@
     "checklist": {
       "title": "Document Checklist",
       "placeholder": "Document name...",
-      "addCustom": "Add custom item"
+      "addCustom": "Add custom item",
+      "required": "Required",
+      "optional": "Optional",
+      "requiredToggle": "Required document"
     },
     "checklistUpdated": "Checklist updated",
     "checklistError": "Failed to update checklist",
@@ -181,7 +193,11 @@
       "intake": "Intake",
       "notSet": "Not set",
       "notYet": "Not yet",
-      "pending": "Pending"
+      "pending": "Pending",
+      "interview": "Interview",
+      "fromCatalogue": "From catalogue",
+      "updated": "Date updated.",
+      "error": "Could not update the date."
     },
     "notes": {
       "title": "Notes",
@@ -207,6 +223,18 @@
       "rejectedTitle": "Every journey teaches something valuable",
       "subtitle": "Your experience can help future students. Share your journey to earn Ghadam coins and help others make better decisions.",
       "cta": "Share My Journey (+150 coins)"
+    },
+    "printPlan": "Print application plan",
+    "exportError": "Could not prepare the application plan.",
+    "confirmRemoveTitle": "Remove this program?",
+    "confirmRemoveDescription": "This will remove {{name}} from your tracker, including its checklist and notes.",
+    "reminders": {
+      "title": "Deadline reminders",
+      "subtitle": "Choose when this program should appear in your upcoming reminder schedule.",
+      "enabled": "Enabled",
+      "daysBefore": "{{count}} days before",
+      "saved": "Reminder settings saved.",
+      "error": "Could not update reminders."
     }
   },
   "explore": {
@@ -228,7 +256,17 @@
       "searchCountries": "Search countries...",
       "searchFields": "Search fields...",
       "noCountries": "No countries found",
-      "noFields": "No fields found"
+      "noFields": "No fields found",
+      "search": "Search",
+      "country": "Country",
+      "field": "Field",
+      "degree": "Degree",
+      "language": "Language",
+      "tuition": "Tuition",
+      "deadline": "Deadline",
+      "allLanguages": "All languages",
+      "anyTuition": "Any tuition",
+      "maxTuition": "Up to {{amount}}"
     },
     "emptyTitle": "No programs found",
     "emptySubtitle": "Try adjusting your filters or search terms",
@@ -243,7 +281,34 @@
       "deadline": "Due {{date}}",
       "scholarships": "Scholarships"
     },
-    "qsRank": "QS #{{rank}}"
+    "qsRank": "QS #{{rank}}",
+    "details": "Details",
+    "officialSource": "Official source",
+    "tooManyTitle": "{{count}} programs found",
+    "tooManySubtitle": "Narrow the list with country, field, degree, language, tuition, or deadline filters before comparing programs.",
+    "emptyFilteredTitle": "No programs match these filters",
+    "emptyFilteredSubtitle": "Clear one or two filters, widen the deadline window, or search for a broader field.",
+    "active": {
+      "search": "Search: {{value}}",
+      "country": "Country: {{value}}",
+      "field": "Field: {{value}}",
+      "degree": "Degree: {{value}}",
+      "language": "Language: {{value}}",
+      "tuitionFree": "Free tuition",
+      "maxTuition": "Tuition up to {{value}}"
+    },
+    "deadlines": {
+      "any": "Any deadline",
+      "future": "Open future deadlines",
+      "next3": "Next 3 months",
+      "next6": "Next 6 months"
+    },
+    "freshness": {
+      "fresh": "Recently verified",
+      "aging": "Needs a quick source check",
+      "stale": "Verify before relying on it",
+      "unknown": "Freshness unknown"
+    }
   },
   "recommendations": {
     "title": "Your Recommendations",
@@ -268,7 +333,38 @@
     "emptyTitle": "No programs found",
     "emptySubtitle": "Try adjusting your preferences to see more results",
     "budgetMax": "Max {{amount}}/year",
-    "bonusEarned": "You earned {{amount}} Ghadam coins."
+    "bonusEarned": "You earned {{amount}} Ghadam coins.",
+    "tooManyTitle": "{{count}} possible matches",
+    "tooManySubtitle": "The list is broad. Tighten your preferences before spending time comparing programs.",
+    "refineTitle": "Refine your matches",
+    "refineSubtitle": "Small profile changes can make these recommendations more useful.",
+    "gpaSummary": "GPA {{gpa}} / {{scale}}",
+    "refinements": {
+      "broaden_country": {
+        "label": "Broaden countries",
+        "detail": "Add nearby countries or remove strict country preferences."
+      },
+      "raise_budget": {
+        "label": "Review budget",
+        "detail": "Many programs are filtered out by tuition. Consider a higher ceiling or tuition-free strategy."
+      },
+      "add_field_focus": {
+        "label": "Narrow fields",
+        "detail": "Choose one or two priority fields before comparing programs."
+      },
+      "add_budget_focus": {
+        "label": "Tighten budget",
+        "detail": "Set a realistic annual tuition ceiling to reduce noisy matches."
+      },
+      "add_gpa": {
+        "label": "Add Iranian GPA",
+        "detail": "Enter your GPA on the 20-point scale so requirement warnings are more accurate."
+      },
+      "add_language": {
+        "label": "Pick language",
+        "detail": "Language preference separates English-taught programs from local-language options."
+      }
+    }
   },
   "addProgram": {
     "title": "Add Program to Tracker",
@@ -382,7 +478,8 @@
       "subtitle": "Select your annual tuition budget range",
       "freeHint": "Many programs in Germany, Norway, etc.",
       "scholarshipsTitle": "Prioritize programs with scholarships",
-      "scholarshipsSubtitle": "We'll highlight programs offering financial aid"
+      "scholarshipsSubtitle": "We'll highlight programs offering financial aid",
+      "currency": "Budget currency"
     },
     "timeline": {
       "title": "When do you plan to start?",
@@ -451,7 +548,11 @@
       "contact": "Contact",
       "link": "Link",
       "reminder": "Reminder",
-      "general": "General"
+      "general": "General",
+      "requirement": "Requirement",
+      "deadline": "Deadline",
+      "funding": "Funding",
+      "portal": "Portal"
     }
   },
   "status": {
@@ -465,5 +566,53 @@
     "rejected": "Rejected",
     "withdrawn": "Withdrawn",
     "deferred": "Deferred"
+  },
+  "language": {
+    "english": "English",
+    "german": "German",
+    "french": "French",
+    "dutch": "Dutch",
+    "spanish": "Spanish",
+    "italian": "Italian",
+    "swedish": "Swedish",
+    "norwegian": "Norwegian",
+    "danish": "Danish",
+    "finnish": "Finnish",
+    "polish": "Polish",
+    "czech": "Czech",
+    "japanese": "Japanese",
+    "chinese": "Chinese",
+    "korean": "Korean",
+    "other": "Other"
+  },
+  "courseDetail": {
+    "loadError": "Failed to load program details.",
+    "notFound": "Program not found.",
+    "backToExplore": "Back to Explore",
+    "overview": "Overview",
+    "field": "Field",
+    "tuition": "Tuition",
+    "duration": "Duration",
+    "deadlineFall": "Fall deadline",
+    "deadlineSpring": "Spring deadline",
+    "gpa": "Minimum GPA",
+    "months_one": "{{count}} month",
+    "months_other": "{{count}} months",
+    "unknown": "Not listed",
+    "freeTuition": "Free tuition",
+    "details": "Details",
+    "languageRequirements": "Language requirements",
+    "noLanguageRequirements": "No structured language requirements are listed yet. Check the official source before applying.",
+    "source": "Source and freshness",
+    "freshness": "Freshness",
+    "officialProgram": "Open official program page",
+    "applicationPage": "Open application page",
+    "scores": {
+      "overall": "Overall",
+      "reading": "Reading",
+      "writing": "Writing",
+      "speaking": "Speaking",
+      "listening": "Listening"
+    }
   }
 }

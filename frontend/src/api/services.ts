@@ -10,6 +10,8 @@ import type {
   TrackedProgram,
   TrackerStats,
   DeadlineItem,
+  ReminderItem,
+  PrintablePlan,
   GhadamTransaction,
   CreateTrackedProgramRequest,
   UpdateTrackedProgramRequest,
@@ -21,6 +23,7 @@ import type {
   RecommendationsResponse,
   ChecklistItem,
   NoteEntry,
+  CourseLanguageRequirement,
 } from '../types';
 
 // Auth
@@ -77,7 +80,7 @@ export const matchingApi = {
     ),
   
   trackRecommendation: (courseId: number, priority: Priority = 'target', intake?: string) =>
-    api.post<{ id: number; course_id: number; match_score: number; message: string }>(
+    api.post<{ id: number; course_id: number; match_score: number; match_reasons?: string[]; warnings?: string[]; recommendation_snapshot?: Record<string, unknown>; message: string }>(
       `/matching/recommendations/${courseId}/track`,
       { priority, intake }
     ),
@@ -106,12 +109,19 @@ export const trackerApi = {
   getStats: () => api.get<TrackerStats>('/tracker/stats'),
   
   getDeadlines: (days = 90) => api.get<DeadlineItem[]>(`/tracker/deadlines?days=${days}`),
+
+  getReminders: (days = 90) => api.get<ReminderItem[]>(`/tracker/reminders?days=${days}`),
+
+  getPrintablePlan: (programId?: number) => {
+    const query = programId ? `?program_id=${programId}` : '';
+    return api.get<PrintablePlan>(`/tracker/export${query}`);
+  },
   
   // Checklist
   updateChecklist: (id: number, checklist: ChecklistItem[]) =>
     api.patch<{ ok: boolean; checklist: ChecklistItem[] }>(`/tracker/programs/${id}/checklist`, checklist),
   
-  addChecklistItem: async (id: number, item: { name: string; required?: boolean; notes?: string }) => {
+  addChecklistItem: async (id: number, item: { name: string; required?: boolean; notes?: string; due_date?: string }) => {
     const result = await api.post<{ ok: boolean; item: ChecklistItem; checklist: ChecklistItem[] }>(`/tracker/programs/${id}/checklist/items`, item);
     // Return a partial TrackedProgram with the updated checklist
     return { id, document_checklist: result.checklist } as TrackedProgram;
@@ -169,7 +179,11 @@ export const courseApi = {
     if (params?.query) searchParams.set('query', params.query);
     if (params?.field) searchParams.set('field', params.field);
     if (params?.degree_level) searchParams.set('degree_level', params.degree_level);
+    if (params?.teaching_language) searchParams.set('teaching_language', params.teaching_language);
+    if (params?.max_tuition !== undefined) searchParams.set('max_tuition', String(params.max_tuition));
     if (params?.tuition_free_only) searchParams.set('tuition_free_only', 'true');
+    if (params?.deadline_after) searchParams.set('deadline_after', params.deadline_after);
+    if (params?.deadline_before) searchParams.set('deadline_before', params.deadline_before);
     if (params?.limit) searchParams.set('limit', String(params.limit));
     if (params?.offset) searchParams.set('offset', String(params.offset));
     
@@ -192,6 +206,9 @@ export const courseApi = {
   autocomplete: (q: string) => api.get<CourseSummary[]>(`/courses/autocomplete?q=${encodeURIComponent(q)}`),
   
   get: (id: number) => api.get<Course>(`/courses/${id}`),
+
+  getLanguageRequirements: (id: number) =>
+    api.get<CourseLanguageRequirement[]>(`/courses/${id}/language-requirements`),
   
   getFields: (minCount = 5) => api.get<Array<{ field: string; count: number }>>(`/courses/fields?min_count=${minCount}`),
   

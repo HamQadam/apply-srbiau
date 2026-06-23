@@ -164,8 +164,35 @@ class DaadCrawler(BaseCrawler[dict[str, Any]]):
                         break
     
     def transform(self, raw_item: dict[str, Any]) -> CrawlResult:
-        """Transform a DAAD program into university and course payloads."""
-        return self._transformer.transform(raw_item)
+        """
+        Stage-1 transform: validate that mandatory fields are present, then
+        return a CrawlResult carrying the untouched raw payload.
+
+        No data transformation is done here — that is the job of the
+        postprocess parse pipeline.
+        """
+        source_id = str(raw_item.get("id", "unknown"))
+
+        # Guard: we need at least an id and a name so the parse job can work
+        required = ["id", "courseName", "academy"]
+        missing = [f for f in required if not raw_item.get(f)]
+        if missing:
+            return CrawlResult(
+                source_id=source_id,
+                status=CrawlStatus.FAILED,
+                error=CrawlError(
+                    source_id=source_id,
+                    error_type="MISSING_REQUIRED_FIELDS",
+                    message=f"Missing required fields: {missing}",
+                    raw_data=raw_item,
+                ),
+            )
+
+        return CrawlResult(
+            source_id=source_id,
+            status=CrawlStatus.SUCCESS,
+            raw_payload=raw_item,
+        )
 
 
 class DaadTransformer:

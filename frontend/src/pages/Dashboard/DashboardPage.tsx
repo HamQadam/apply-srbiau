@@ -9,6 +9,7 @@ import { PageTransition } from '../../components/Transitions/PageTransition';
 import { ProgramCard } from '../../components/Tracker/ProgramCard';
 import { DeadlineList } from '../../components/Tracker/DeadlineList';
 import { Skeleton } from '../../components/Feedback/Skeleton';
+import { ConfirmDialog } from '../../components/Feedback/ConfirmDialog';
 import { cn } from '../../lib/cn';
 import { formatNumber } from '../../lib/format';
 import type { TrackedProgram, TrackerStats, DeadlineItem } from '../../types';
@@ -20,6 +21,8 @@ export function DashboardPage() {
   const [stats, setStats] = useState<TrackerStats | null>(null);
   const [deadlines, setDeadlines] = useState<DeadlineItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [programPendingDelete, setProgramPendingDelete] = useState<TrackedProgram | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
   
   useEffect(() => {
     loadData();
@@ -55,14 +58,33 @@ export function DashboardPage() {
   };
   
   const handleDelete = async (id: number) => {
-    if (!confirm(t('dashboard.confirmRemove'))) return;
+    const program = programs.find((item) => item.id === id);
+    if (program) setProgramPendingDelete(program);
+  };
+
+  const confirmDeleteProgram = async () => {
+    if (!programPendingDelete) return;
+    setDeleteBusy(true);
     try {
-      await trackerApi.deleteProgram(id);
+      await trackerApi.deleteProgram(programPendingDelete.id);
       toast.success(t('dashboard.programRemoved'));
+      setProgramPendingDelete(null);
       loadData();
     } catch (err) {
       console.error('Failed to delete:', err);
       toast.error(t('dashboard.programRemoveError'));
+    } finally {
+      setDeleteBusy(false);
+    }
+  };
+
+  const handlePrintPlan = async () => {
+    try {
+      await trackerApi.getPrintablePlan();
+      window.print();
+    } catch (err) {
+      console.error('Failed to prepare printable plan:', err);
+      toast.error(t('dashboard.exportError'));
     }
   };
   
@@ -109,6 +131,20 @@ export function DashboardPage() {
           <p className="text-text-muted mt-1">{t('dashboard.subtitle')}</p>
         </div>
         <div className="flex items-center gap-3">
+          {programs.length > 0 && (
+            <motion.button
+              type="button"
+              onClick={handlePrintPlan}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.97 }}
+              className="px-4 py-2 border border-border text-text-secondary font-medium rounded-xl hover:bg-elevated transition-colors flex items-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6v-8z" />
+              </svg>
+              <span>{t('dashboard.printPlan')}</span>
+            </motion.button>
+          )}
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}>
             <Link
             to="/recommendations"
@@ -318,6 +354,19 @@ export function DashboardPage() {
           </div>
         </div>
       </div>
+      <ConfirmDialog
+        open={Boolean(programPendingDelete)}
+        title={t('dashboard.confirmDeleteTitle')}
+        description={t('dashboard.confirmDeleteDescription', {
+          name: programPendingDelete?.program_name || programPendingDelete?.custom_program_name || t('program.unknown'),
+        })}
+        confirmLabel={t('common.delete')}
+        destructive
+        busy={deleteBusy}
+        onCancel={() => setProgramPendingDelete(null)}
+        onConfirm={confirmDeleteProgram}
+      />
+
       <motion.div
         className="md:hidden fixed bottom-6 z-40"
         style={{ insetInlineEnd: '1rem' }}

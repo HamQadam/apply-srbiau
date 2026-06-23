@@ -10,6 +10,7 @@ import { DashboardPage } from './pages/Dashboard/DashboardPage';
 import { AddProgramPage } from './pages/Dashboard/AddProgramPage';
 import { ProgramDetailPage } from './pages/Dashboard/ProgramDetailPage';
 import { ExplorePage } from './pages/Explore/ExplorePage';
+import { CourseDetailPage } from './pages/Explore/CourseDetailPage';
 import { RecommendationsPage } from './pages/Recommendations/RecommendationsPage';
 import { SettingsPage } from './pages/Settings/SettingsPage';
 import { Spinner } from './components/Feedback/Spinner';
@@ -45,6 +46,7 @@ function AppRoutes() {
         <Route path="/" element={<Layout />}>
           <Route index element={<HomePage />} />
           <Route path="explore" element={<ExplorePage />} />
+          <Route path="courses/:id" element={<CourseDetailPage />} />
         </Route>
         
         {/* Auth routes */}

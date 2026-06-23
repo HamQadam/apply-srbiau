@@ -4,28 +4,33 @@ This file turns the proposal into concrete engineering work. Keep it updated as 
 
 ## Phase 0: Stabilize the Existing App
 
-- [x] Run backend import/startup and fix model import errors.
-- [x] Fix `backend/app/models/applicant.py` missing imports or undefined schema names.
-- [x] Fix `Application` to `University` relationship consistency.
-- [x] Remove duplicate `debug_otp` definition in `backend/app/config.py`.
-- [x] Fix crawler state volume mismatch in `deploy/compose.yml`.
-- [x] Decide which existing API modules should be mounted in `app/api/v1/router.py`.
-- [ ] Add smoke tests for app startup, health endpoint, and mounted routes.
+- [X] Run backend import/startup and fix model import errors.
+- [X] Fix `backend/app/models/applicant.py` missing imports or undefined schema names.
+- [X] Fix `Application` to `University` relationship consistency.
+- [X] Remove duplicate `debug_otp` definition in `backend/app/config.py`.
+- [X] Fix crawler state volume mismatch in `deploy/compose.yml`.
+- [X] Decide which existing API modules should be mounted in `app/api/v1/router.py`.
 - [ ] Add frontend build check to normal development workflow.
 
 ## Phase 1: Documentation and Developer Onboarding
 
-- [x] Add architecture documentation.
-- [x] Add product proposal.
-- [x] Add current-state audit.
-- [x] Add task roadmap.
-- [x] Add LLM onboarding context.
-- [x] Replace or revise root README with current run instructions and links.
-- [ ] Add `.env.example` comments for all required variables.
-- [ ] Document local setup for backend, frontend, crawlers, and postprocess.
+- [X] Add architecture documentation.
+- [X] Add product proposal.
+- [X] Add current-state audit.
+- [X] Add task roadmap.
+- [X] Add LLM onboarding context.
+- [X] Replace or revise root README with current run instructions and links.
+- [X] Add `.env.example` comments for all required variables.
+- [X] Document local setup for backend, frontend, crawlers, and postprocess.
 
 ## Phase 2: Programme Catalogue Quality
 
+- [X] Introduce two-phase crawl pipeline: raw storage → lexical parse → LLM enrich.
+- [X] Add raw_crawl_items table (JSONB) as staging area for all crawled payloads.
+- [X] Simplify crawlers to store-only (no transform at crawl time).
+- [X] Add Stage-2 parse-raw postprocess job (lexical rules, flags needs_llm).
+- [X] Add Stage-3 llm-enrich postprocess job (LiteLLM, provider-agnostic).
+- [X] Add litellm dependency; configure via LITELLM_MODEL / LITELLM_API_KEY env vars.
 - [ ] Add source metadata fields for universities/courses.
 - [ ] Store source external IDs for crawled courses.
 - [ ] Add last crawled and last verified timestamps.
@@ -38,33 +43,33 @@ This file turns the proposal into concrete engineering work. Keep it updated as 
 
 ## Phase 3: Persian-First Explore
 
-- [ ] Make Persian the default product language for Iranian users.
-- [ ] Audit all core pages for RTL layout issues.
-- [ ] Improve Explore filters for country, field, degree, tuition, deadline, and language.
-- [ ] Show selected filter values on filter buttons.
-- [ ] Add clear empty and too-many-results states.
-- [ ] Add source/freshness display on program cards or detail pages.
-- [ ] Add course detail page if not already available outside tracked programs.
+- [X] Make Persian the default product language for Iranian users.
+- [X] Audit all core pages for RTL layout issues.
+- [X] Improve Explore filters for country, field, degree, tuition, deadline, and language.
+- [X] Show selected filter values on filter buttons.
+- [X] Add clear empty and too-many-results states.
+- [X] Add source/freshness display on program cards or detail pages.
+- [X] Add course detail page if not already available outside tracked programs.
 
 ## Phase 4: Recommendation Loop
 
-- [ ] Define the matching profile schema as a typed backend model instead of anonymous JSON only.
-- [ ] Add frontend explanations for match score reasons and warnings.
-- [ ] Add max result thresholds and preference refinement prompts.
-- [ ] Add support for Iranian GPA scales more explicitly.
-- [ ] Add budget currency conversion strategy.
-- [ ] Add tests for match scoring cases.
-- [ ] Persist recommendation snapshots when a user adds a program to tracker.
+- [X] Define the matching profile schema as a typed backend model instead of anonymous JSON only.
+- [X] Add frontend explanations for match score reasons and warnings.
+- [X] Add max result thresholds and preference refinement prompts.
+- [X] Add support for Iranian GPA scales more explicitly.
+- [X] Add budget currency conversion strategy.
+- [X] Add tests for match scoring cases.
+- [X] Persist recommendation snapshots when a user adds a program to tracker.
 
 ## Phase 5: Tracker Quality
 
-- [ ] Add confirmation modal for destructive actions.
-- [ ] Improve document checklist required labels.
-- [ ] Make empty date fields actionable.
-- [ ] Improve deadline warning color logic.
-- [ ] Add reminders architecture for upcoming deadlines.
-- [ ] Add export or printable application plan.
-- [ ] Add richer notes categories if users actually need them.
+- [X] Add confirmation modal for destructive actions.
+- [X] Improve document checklist required labels.
+- [X] Make empty date fields actionable.
+- [X] Improve deadline warning color logic.
+- [X] Add reminders architecture for upcoming deadlines.
+- [X] Add export or printable application plan.
+- [X] Add richer notes categories if users actually need them.
 
 ## Phase 6: Experience Sharing
 

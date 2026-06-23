@@ -191,24 +191,25 @@ def setup_logging(verbose: bool = False, log_file: str | None = None) -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 async def run_daad(args: argparse.Namespace, cfg: CrawlerSettings) -> int:
-    """Run DAAD crawler."""
-    from daad_ingestor import DaadCrawler, PgStore
+    """Run DAAD crawler — stores raw JSON to raw_crawl_items."""
+    from daad_ingestor import DaadCrawler
     from daad_ingestor.state import StateStore
     from base import IngestionEngine, IngestionConfig
-    
+    from db import RawStore
+
     log = logging.getLogger("cli.daad")
-    
+
     # Load state for resumption
     state = StateStore(cfg.checkpoint_path("daad"))
     start_offsets = {}
-    
+
     if args.resume:
         for degree in ["bachelor", "master", "phd"]:
             offset = state.get_offset(degree)
             if offset > 0:
                 start_offsets[degree] = offset
                 log.info("Resuming %s from offset %d", degree, offset)
-    
+
     # Create crawler
     crawler = DaadCrawler(
         base_url=cfg.daad_base_url,
@@ -217,15 +218,14 @@ async def run_daad(args: argparse.Namespace, cfg: CrawlerSettings) -> int:
         page_size=cfg.daad_page_size,
         start_offsets=start_offsets,
     )
-    
-    # Create database store
-    db = PgStore(
+
+    # Raw store — writes to raw_crawl_items only
+    db = RawStore(
         dsn=cfg.effective_database_url(),
         schema=cfg.db_schema,
         pool_max=cfg.db_pool_max,
     )
-    
-    # Create ingestion engine
+
     ingestion_config = IngestionConfig(
         batch_size=cfg.batch_size,
         dry_run=args.dry_run,
@@ -234,28 +234,27 @@ async def run_daad(args: argparse.Namespace, cfg: CrawlerSettings) -> int:
         db_wait_timeout_s=cfg.db_wait_timeout_s,
     )
     engine = IngestionEngine(db, ingestion_config)
-    
+
     try:
         await db.aopen()
         crawl_stats, ingest_stats = await engine.run(crawler)
-        
+
         if crawl_stats and crawl_stats.total_failed > 0:
             return 1
         return 0
-        
+
     finally:
         await db.aclose()
 
 
 async def run_studyinnl(args: argparse.Namespace, cfg: CrawlerSettings) -> int:
-    """Run StudyInNL crawler."""
+    """Run StudyInNL crawler — stores raw JSON to raw_crawl_items."""
     from studyinnl_ingestor import StudyInNLCrawler
-    from daad_ingestor import PgStore  # Reuse PgStore
     from base import IngestionEngine, IngestionConfig
-    
+    from db import RawStore
+
     log = logging.getLogger("cli.studyinnl")
-    
-    # Create crawler
+
     crawler = StudyInNLCrawler(
         base_url=cfg.studyinnl_base_url,
         rps=cfg.studyinnl_rps,
@@ -263,15 +262,13 @@ async def run_studyinnl(args: argparse.Namespace, cfg: CrawlerSettings) -> int:
         start_offset=args.offset or 0,
         max_programs=args.max_programs,
     )
-    
-    # Create database store
-    db = PgStore(
+
+    db = RawStore(
         dsn=cfg.effective_database_url(),
         schema=cfg.db_schema,
         pool_max=cfg.db_pool_max,
     )
-    
-    # Create ingestion engine
+
     ingestion_config = IngestionConfig(
         batch_size=cfg.batch_size,
         dry_run=args.dry_run,
@@ -280,15 +277,15 @@ async def run_studyinnl(args: argparse.Namespace, cfg: CrawlerSettings) -> int:
         db_wait_timeout_s=cfg.db_wait_timeout_s,
     )
     engine = IngestionEngine(db, ingestion_config)
-    
+
     try:
         await db.aopen()
         crawl_stats, ingest_stats = await engine.run(crawler)
-        
+
         if crawl_stats and crawl_stats.total_failed > 0:
             return 1
         return 0
-        
+
     finally:
         await db.aclose()
 

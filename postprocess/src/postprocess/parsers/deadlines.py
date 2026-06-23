@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Optional, List, Tuple
 
-from ..llm_fallback import LLMFallback
+from ..llm_client import LLMClient
 
 log = logging.getLogger(__name__)
 
@@ -46,7 +46,7 @@ RE_ISO = re.compile(r"\b(20\d{2})-(\d{1,2})-(\d{1,2})\b")
 # EU numeric: 15.07.2026 or 15/07/2026 or 15.07
 RE_EU = re.compile(r"\b(\d{1,2})[./-](\d{1,2})(?:[./-](20\d{2}))?\b")
 
-# Range connectors: use proximity between two mentions + connectors in-between
+# Range connectors
 CONNECTOR_RE = re.compile(r"\b(to|until|till|through|thru|bis)\b|[-–—]", re.I)
 
 # Semester/context patterns
@@ -57,22 +57,31 @@ SPRING_RE = re.compile(
     r"\b(summer semester|summer term|spring intake|march intake|march entries|march|ss)\b", re.I
 )
 
-# Keywords indicating an end/deadline (if multiple dates exist)
+# Keywords indicating an end/deadline
 END_HINT_RE = re.compile(
     r"\b(deadline|until|latest|at the latest|no later than|by)\b", re.I
 )
 
-# Split segments (bullets, semicolons, newlines). Keep it conservative.
+# Split segments
 SEG_SPLIT_RE = re.compile(r"[;\n•]+")
 
-# Fast “is there any date-like thing here?” gate to avoid wasting LLM calls.
+# Gate to avoid wasting LLM calls on text with no date signals
 DATE_SIGNAL_RE = re.compile(
-    r"\b20\d{2}-\d{1,2}-\d{1,2}\b"  # ISO
-    r"|\b\d{1,2}[./-]\d{1,2}(?:[./-]20\d{2})?\b"  # 15/07/2026 or 15-07 or 15.07
-    r"|\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\b"  # month word
-    r"|\b\d{1,2}\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\b"  # 15 July
-    r"|\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\s+\d{1,2}\b",  # July 15
+    r"\b20\d{2}-\d{1,2}-\d{1,2}\b"
+    r"|\b\d{1,2}[./-]\d{1,2}(?:[./-]20\d{2})?\b"
+    r"|\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\b"
+    r"|\b\d{1,2}\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\b"
+    r"|\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\s+\d{1,2}\b",
     re.I,
+)
+
+_LLM_SYSTEM = (
+    "You are a data extraction assistant. "
+    "Extract application deadlines from the text. "
+    "Return ONLY a JSON object with keys: "
+    '"spring_mmdd" (MM-DD or null), "fall_mmdd" (MM-DD or null), "notes" (string or null). '
+    "Rules: for date ranges choose the END date; choose the latest date per semester; "
+    "mmdd must be zero-padded MM-DD. No markdown, no explanation."
 )
 
 
@@ -84,7 +93,6 @@ def _clean_text(raw: str) -> str:
     if not raw:
         return ""
     txt = html.unescape(raw).replace("\xa0", " ")
-    # remove HTML tags if crawler stored them
     txt = re.sub(r"<[^>]+>", " ", txt)
     txt = re.sub(r"\s+", " ", txt).strip()
     return txt
@@ -95,7 +103,6 @@ def _to_month(name: str) -> Optional[int]:
 
 
 def _is_valid_mmdd(mm: int, dd: int) -> bool:
-    # Use leap year 2024 so Feb 29 is allowed; rejects Apr 31, etc.
     try:
         date(2024, mm, dd)
         return True
@@ -104,14 +111,8 @@ def _is_valid_mmdd(mm: int, dd: int) -> bool:
 
 
 def _next_occurrence(mm: int, dd: int, today: date) -> Optional[date]:
-    """
-    Return the next occurrence of mm-dd >= today.
-    If the date is invalid in a given year (e.g., Feb 29 on non-leap year),
-    search forward up to 8 years. Return None if never valid.
-    """
     if not _is_valid_mmdd(mm, dd):
         return None
-
     for y in range(today.year, today.year + 9):
         try:
             candidate = date(y, mm, dd)
@@ -142,13 +143,11 @@ def _parse_valid_date(year: int, mm: int, dd: int) -> Optional[date]:
 def _extract_mentions(seg: str) -> List[Mention]:
     mentions: List[Mention] = []
 
-    # ISO
     for m in RE_ISO.finditer(seg):
         y, mm, dd = int(m.group(1)), int(m.group(2)), int(m.group(3))
         if _parse_valid_date(y, mm, dd):
             mentions.append(Mention(m.start(), m.end(), mm, dd, y, m.group(0)))
 
-    # Month name: "15 July 2026"
     for m in RE_DD_MON.finditer(seg):
         dd = int(m.group(1))
         mm = _to_month(m.group(2))
@@ -156,7 +155,6 @@ def _extract_mentions(seg: str) -> List[Mention]:
         if mm and 1 <= dd <= 31:
             mentions.append(Mention(m.start(), m.end(), mm, dd, y, m.group(0)))
 
-    # Month name: "July 15, 2026"
     for m in RE_MON_DD.finditer(seg):
         mm = _to_month(m.group(1))
         dd = int(m.group(2))
@@ -168,12 +166,9 @@ def _extract_mentions(seg: str) -> List[Mention]:
         if mm and 1 <= dd <= 31:
             mentions.append(Mention(m.start(), m.end(), mm, dd, y, m.group(0)))
 
-    # EU numeric: 15.07.2026 or 15.07
     for m in RE_EU.finditer(seg):
         d1, d2 = int(m.group(1)), int(m.group(2))
         y = int(m.group(3)) if m.group(3) else None
-
-        # interpret as DD.MM
         dd, mm = d1, d2
         if not (1 <= mm <= 12 and 1 <= dd <= 31):
             continue
@@ -196,27 +191,19 @@ def _detect_ctx(seg: str) -> Optional[str]:
 
 
 def _pick_deadline_from_segment(seg: str) -> Optional[Tuple[int, int]]:
-    """
-    Return best (mm, dd) for this segment, rules-first:
-      - If range detected: return end date
-      - Else prefer dates near "until/deadline/latest/by"
-      - Else return latest mm-dd in segment
-    """
     mentions = _extract_mentions(seg)
     if not mentions:
         return None
 
-    # 1) Range detection: consecutive mentions with connector between them
     for i in range(len(mentions) - 1):
         between = seg[mentions[i].end : mentions[i + 1].start]
         if len(between) <= 40 and CONNECTOR_RE.search(between):
             mm, dd = mentions[i + 1].mm, mentions[i + 1].dd
             return (mm, dd) if _is_valid_mmdd(mm, dd) else None
 
-    # 2) End/deadline hints: choose mention that is closest after hint
     hint_positions = [m.start() for m in END_HINT_RE.finditer(seg)]
     if hint_positions:
-        best: Optional[Tuple[int, int, int]] = None  # (distance, mm, dd)
+        best: Optional[Tuple[int, int, int]] = None
         for hp in hint_positions:
             for mn in mentions:
                 if mn.start >= hp and (mn.start - hp) <= 50:
@@ -228,13 +215,11 @@ def _pick_deadline_from_segment(seg: str) -> Optional[Tuple[int, int]]:
         if best:
             return (best[1], best[2])
 
-    # 3) Otherwise pick latest valid mm-dd in segment
     latest = max(((m.mm, m.dd) for m in mentions if _is_valid_mmdd(m.mm, m.dd)), default=None)
     return latest
 
 
 def _heuristic_semester_from_month(mm: int) -> Optional[str]:
-    # Used only when no explicit context exists
     if mm in (10, 11, 12, 1, 2, 3):
         return "spring"
     if mm in (4, 5, 6, 7, 8, 9):
@@ -269,12 +254,12 @@ class ParseResult:
 def parse_deadlines_notes(
     deadline_notes: str,
     today: date,
-    llm: Optional[LLMFallback],
+    llm: Optional[LLMClient],
     need_fall: bool,
     need_spring: bool,
 ) -> ParseResult:
     """
-    Deterministic first; LLM fallback only if missing required values.
+    Deterministic first; LiteLLM fallback only if missing required values.
     """
     txt = _clean_text(deadline_notes)
     if not txt:
@@ -284,21 +269,17 @@ def parse_deadlines_notes(
 
     fall_best: Optional[Tuple[int, int]] = None
     spring_best: Optional[Tuple[int, int]] = None
-
     current_ctx: Optional[str] = None
     unassigned: List[Tuple[int, int]] = []
 
-    # Segment-aware context routing
     for seg in segments:
         seg_ctx = _detect_ctx(seg)
         if seg_ctx:
             current_ctx = seg_ctx
-
         ctx = seg_ctx or current_ctx
         pick = _pick_deadline_from_segment(seg)
         if not pick:
             continue
-
         mm, dd = pick
         if ctx == "fall":
             fall_best = max(fall_best or (0, 0), (mm, dd))
@@ -310,7 +291,6 @@ def parse_deadlines_notes(
     debug_parts: List[str] = []
     used_llm = False
 
-    # Heuristic assignment (pick latest per guessed semester) only if needed
     if unassigned and ((need_fall and fall_best is None) or (need_spring and spring_best is None)):
         fall_cands = [(mm, dd) for (mm, dd) in unassigned if _heuristic_semester_from_month(mm) == "fall" and _is_valid_mmdd(mm, dd)]
         spring_cands = [(mm, dd) for (mm, dd) in unassigned if _heuristic_semester_from_month(mm) == "spring" and _is_valid_mmdd(mm, dd)]
@@ -323,14 +303,18 @@ def parse_deadlines_notes(
             spring_best = max(spring_cands)
             debug_parts.append(f"heuristic->spring {spring_best[0]:02d}-{spring_best[1]:02d}")
 
-    # LLM fallback only if still missing required AND there is a date-like signal
+    # LiteLLM fallback only if still missing required AND there is a date-like signal
     still_need_llm = (need_fall and fall_best is None) or (need_spring and spring_best is None)
-    if still_need_llm and llm is not None and llm.enabled:
+    if still_need_llm and llm is not None and llm.cfg.enabled:
         if not _has_date_signal(txt):
             debug_parts.append("skip_llm=no_date_signal")
         else:
             used_llm = True
-            j = llm.extract_mmdd(txt)
+            messages = [
+                {"role": "system", "content": _LLM_SYSTEM},
+                {"role": "user", "content": f"TEXT:\n{txt[:2000]}"},
+            ]
+            j = llm.extract_json(messages) or {}
 
             if need_fall and fall_best is None:
                 mmdd = _parse_mmdd(j.get("fall_mmdd"))

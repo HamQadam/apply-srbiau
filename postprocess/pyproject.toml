@@ -1,12 +1,17 @@
 [project]
 name = "postprocess-jobs"
-version = "0.1.0"
-description = "Post-process jobs for crawler outputs (rules-first, LLM fallback)."
+version = "0.3.0"
+description = "Post-process jobs for crawler outputs (rules-first, LLM enrichment)."
 requires-python = ">=3.11"
 dependencies = [
   "psycopg[binary]>=3.1.18",
   "python-dotenv>=1.0.1",
-  "llama-cpp-python>=0.3.0",
+  # Stage-2 lexical parse (fuzzy deduplication)
+  "rapidfuzz>=3.6",
+  # Stage-3 LLM enrichment — LiteLLM speaks to any provider
+  # (OpenRouter, Groq, Azure, Ollama, …) with a single interface.
+  # Switch provider by changing LITELLM_MODEL env var; no code changes needed.
+  "litellm>=1.40",
 ]
 
 [project.scripts]

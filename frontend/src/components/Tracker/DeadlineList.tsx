@@ -8,6 +8,21 @@ interface DeadlineListProps {
   deadlines: DeadlineItem[];
 }
 
+function deadlineTone(daysUntil: number) {
+  if (daysUntil < 0) return 'text-status-danger';
+  if (daysUntil === 0) return 'text-status-danger';
+  if (daysUntil <= 7) return 'text-status-danger';
+  if (daysUntil <= 30) return 'text-status-warning';
+  return 'text-text-primary';
+}
+
+function deadlineLabel(t: ReturnType<typeof useTranslation>['t'], daysUntil: number) {
+  if (daysUntil < 0) return t('deadlines.overdue', { count: Math.abs(daysUntil) });
+  if (daysUntil === 0) return t('deadlines.today');
+  if (daysUntil === 1) return t('deadlines.tomorrow');
+  return t('deadlines.daysAway', { count: daysUntil });
+}
+
 export function DeadlineList({ deadlines }: DeadlineListProps) {
   const { t, i18n } = useTranslation();
 
@@ -39,21 +54,8 @@ export function DeadlineList({ deadlines }: DeadlineListProps) {
             <p className="text-xs text-text-muted truncate">{deadline.university_name}</p>
           </div>
           <div className="ms-4 text-end">
-            <p
-              className={cn(
-                'text-sm font-medium',
-                deadline.days_until <= 7
-                  ? 'text-status-danger'
-                  : deadline.days_until <= 14
-                  ? 'text-status-warning'
-                  : 'text-text-primary'
-              )}
-            >
-              {deadline.days_until === 0
-                ? t('deadlines.today')
-                : deadline.days_until === 1
-                ? t('deadlines.tomorrow')
-                : t('deadlines.daysAway', { count: deadline.days_until })}
+            <p className={cn('text-sm font-medium', deadlineTone(deadline.days_until))}>
+              {deadlineLabel(t, deadline.days_until)}
             </p>
             <p className="text-xs text-text-muted">
               {formatDate(deadline.deadline, i18n.language, { month: 'short', day: 'numeric' })}

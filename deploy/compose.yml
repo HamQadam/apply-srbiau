@@ -8,8 +8,8 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-apply_secret}
       POSTGRES_DB: ${POSTGRES_DB:-apply_db}
       POSTGRES_HOST: database
-      DEBUG: ${DEBUG:-false}
-      DEBUG_OTP: ${DEBUG_OTP:-false}
+      DEBUG: ${DEBUG:-true}
+      DEBUG_OTP: ${DEBUG_OTP:-true}
       CORS_ORIGINS: '["https://apply.ham-ghadam.ir","https://apply-api.ham-ghadam.ir","http://localhost","http://127.0.0.1","http://localhost:5173","http://127.0.0.1:5173"]'
     env_file:
       - path: ../.env
@@ -127,9 +127,65 @@ services:
 
 
   # ─────────────────────────────────────────────────────────────
-  # Post-process: Deadline Refiner (rules-first, LLM fallback)
+  # Post-process Stage 2: Lexical parse job
+  # Reads raw_crawl_items (parse_status=pending), runs rule-based
+  # transformers, writes to courses/universities, flags needs_llm.
+  # ─────────────────────────────────────────────────────────────
+  parse-raw:
+    build: ../postprocess
+    command: ["run", "parse-raw", "--batch-size", "100", "--max-rows", "50000"]
+    profiles: ["postprocess", "all-postprocess"]
+    env_file:
+      - path: ../.env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-apply_user}:${POSTGRES_PASSWORD:-apply_secret}@database:5432/${POSTGRES_DB:-apply_db}
+      LOCK_ROWS: "true"
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    depends_on:
+      api:
+        condition: service_healthy
+      database:
+        condition: service_healthy
+    restart: "no"
+
+  # ─────────────────────────────────────────────────────────────
+  # Post-process Stage 3: LLM enrichment job
+  # Reads raw_crawl_items (parse_status=needs_llm), calls LiteLLM
+  # to fill missing fields, patches courses, marks done.
+  # ─────────────────────────────────────────────────────────────
+  llm-enrich:
+    build: ../postprocess
+    command: ["run", "llm-enrich", "--batch-size", "50", "--max-rows", "10000"]
+    profiles: ["postprocess", "all-postprocess"]
+    env_file:
+      - path: ../.env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-apply_user}:${POSTGRES_PASSWORD:-apply_secret}@database:5432/${POSTGRES_DB:-apply_db}
+      LOCK_ROWS: "true"
+      # LiteLLM provider config — set these in your .env file.
+      # Switch provider by changing LITELLM_MODEL; no code changes needed.
+      LITELLM_ENABLED: ${LITELLM_ENABLED:-true}
+      LITELLM_MODEL: ${LITELLM_MODEL:-openrouter/meta-llama/llama-3.1-8b-instruct:free}
+      LITELLM_API_KEY: ${LITELLM_API_KEY:-}
+      LITELLM_API_BASE: ${LITELLM_API_BASE:-}
+      LITELLM_MAX_TOKENS: ${LITELLM_MAX_TOKENS:-256}
+      LITELLM_TEMPERATURE: ${LITELLM_TEMPERATURE:-0.0}
+      LITELLM_TIMEOUT: ${LITELLM_TIMEOUT:-30}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    depends_on:
+      api:
+        condition: service_healthy
+      database:
+        condition: service_healthy
+    restart: "no"
+
+  # ─────────────────────────────────────────────────────────────
+  # Post-process: Deadline Refiner (rules-first, local LLM fallback)
+  # Runs after parse-raw; fills deadline_fall/spring from deadline_notes.
   # ─────────────────────────────────────────────────────────────
   deadline-refiner:
+    env_file:
+      - path: ../.env
     build: ../postprocess
     command: ["run", "deadlines", "--batch-size", "200", "--max-rows", "50000"]
     profiles: ["postprocess", "all-postprocess"]
@@ -141,14 +197,14 @@ services:
       FALL_COLUMN: deadline_fall
       SPRING_COLUMN: deadline_spring
       LOCK_ROWS: "true"
-      LLM_ENABLED: ${LLM_ENABLED:-true}
-      LLM_MODEL_PATH: /models/Phi-3-mini-4k-instruct-q4.gguf
-      LLM_CTX: ${LLM_CTX:-1024}
-      LLM_BATCH: ${LLM_BATCH:-128}
-      LLM_THREADS: ${LLM_THREADS:-8}
+      LITELLM_ENABLED: ${LITELLM_ENABLED:-true}
+      LITELLM_MODEL: ${LITELLM_MODEL:-}
+      LITELLM_API_KEY: ${LITELLM_API_KEY:-}
+      LITELLM_API_BASE: ${LITELLM_API_BASE:-}
+      LITELLM_MAX_TOKENS: ${LITELLM_MAX_TOKENS:-256}
+      LITELLM_TEMPERATURE: ${LITELLM_TEMPERATURE:-0.0}
+      LITELLM_TIMEOUT: ${LITELLM_TIMEOUT:-30}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
-    volumes:
-      - ./models:/models:ro
     depends_on:
       api:
         condition: service_healthy

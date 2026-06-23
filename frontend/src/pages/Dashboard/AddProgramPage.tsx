@@ -165,7 +165,7 @@ export function AddProgramPage() {
                 className="w-full px-4 py-3 border border-border rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent bg-background"
               />
               {searching && (
-                <div className="absolute right-3 top-3">
+                <div className="absolute end-3 top-3">
                   <Spinner className="h-5 w-5" />
                 </div>
               )}

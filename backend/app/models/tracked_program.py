@@ -3,7 +3,7 @@ from datetime import datetime, date
 from typing import Optional, List, TYPE_CHECKING
 from enum import Enum
 from sqlmodel import SQLModel, Field, Relationship, Column
-from sqlalchemy import Enum as SAEnum, JSON
+from sqlalchemy import Enum as SAEnum, JSON, Boolean
 
 if TYPE_CHECKING:
     from .user import User
@@ -45,6 +45,7 @@ class DocumentChecklistItem(SQLModel):
     required: bool = True
     completed: bool = False
     notes: Optional[str] = None
+    due_date: Optional[date] = None
 
 
 class TrackedProgramBase(SQLModel):
@@ -85,6 +86,12 @@ class TrackedProgramBase(SQLModel):
     # Document checklist stored as JSON
     document_checklist: Optional[List[dict]] = Field(default=None, sa_column=Column(JSON))
     
+    # Reminder preferences for upcoming deadline nudges. Actual delivery can be
+    # handled by a scheduler/email worker without changing tracker records.
+    reminders_enabled: bool = Field(default=True, sa_column=Column(Boolean, nullable=False, server_default="true"))
+    reminder_offsets_days: Optional[List[int]] = Field(default=None, sa_column=Column(JSON))
+    next_reminder_at: Optional[datetime] = Field(default=None)
+    
     # Application details
     application_portal_url: Optional[str] = Field(default=None, max_length=500)
     application_id: Optional[str] = Field(default=None, max_length=100)  # Their ref number
@@ -99,6 +106,10 @@ class TrackedProgramBase(SQLModel):
     
     # Match score from recommendations (0-100)
     match_score: Optional[int] = Field(default=None)
+    match_reasons: Optional[List[str]] = Field(default=None, sa_column=Column(JSON))
+    match_warnings: Optional[List[str]] = Field(default=None, sa_column=Column(JSON))
+    matching_profile_snapshot: Optional[dict] = Field(default=None, sa_column=Column(JSON))
+    recommendation_snapshot: Optional[dict] = Field(default=None, sa_column=Column(JSON))
 
 
 class TrackedProgram(TrackedProgramBase, table=True):
@@ -145,12 +156,19 @@ class TrackedProgramUpdate(SQLModel):
     notes: Optional[str] = None
     notes_entries: Optional[List[dict]] = None
     document_checklist: Optional[List[dict]] = None
+    reminders_enabled: Optional[bool] = None
+    reminder_offsets_days: Optional[List[int]] = None
+    next_reminder_at: Optional[datetime] = None
     application_portal_url: Optional[str] = None
     application_id: Optional[str] = None
     scholarship_offered: Optional[bool] = None
     scholarship_amount: Optional[int] = None
     scholarship_notes: Optional[str] = None
     match_score: Optional[int] = None
+    match_reasons: Optional[List[str]] = None
+    match_warnings: Optional[List[str]] = None
+    matching_profile_snapshot: Optional[dict] = None
+    recommendation_snapshot: Optional[dict] = None
 
 
 class TrackedProgramRead(TrackedProgramBase):
@@ -172,6 +190,10 @@ class TrackedProgramRead(TrackedProgramBase):
     
     # Match score
     match_score: Optional[int] = None
+    match_reasons: Optional[List[str]] = None
+    match_warnings: Optional[List[str]] = None
+    matching_profile_snapshot: Optional[dict] = None
+    recommendation_snapshot: Optional[dict] = None
 
 
 class TrackerStats(SQLModel):
@@ -197,4 +219,14 @@ DEFAULT_CHECKLIST = [
 
 
 # Note entry categories
-NOTE_CATEGORIES = ["important", "contact", "link", "reminder", "general"]
+NOTE_CATEGORIES = [
+    "important",
+    "contact",
+    "link",
+    "reminder",
+    "requirement",
+    "deadline",
+    "funding",
+    "portal",
+    "general",
+]

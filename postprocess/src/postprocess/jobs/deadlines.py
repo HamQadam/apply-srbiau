@@ -1,12 +1,12 @@
 # postprocess/jobs/deadlines.py
 import logging
 from datetime import date
-from typing import Optional, List, Tuple
+from typing import Optional, Tuple
 
 import psycopg
 
 from ..config import AppConfig
-from ..llm_fallback import LLMFallback, LLMConfig
+from ..llm_client import LLMClient, LLMClientConfig
 from ..parsers.deadlines import parse_deadlines_notes
 from .base import JobArgs
 
@@ -18,18 +18,10 @@ class DeadlinesJob:
 
     def __init__(self, cfg: AppConfig) -> None:
         self.cfg = cfg
-        self.llm = LLMFallback(
-            LLMConfig(
-                model_path=cfg.llm_model_path,
-                n_ctx=cfg.llm_ctx,
-                n_batch=cfg.llm_batch,
-                n_threads=cfg.llm_threads,
-            ),
-            enabled=cfg.llm_enabled,
-        )
+        llm_cfg = LLMClientConfig.from_env()
+        self.llm = LLMClient(llm_cfg)
 
     def _select_one(self, cur: psycopg.Cursor) -> Optional[Tuple[int, Optional[date], Optional[date], Optional[str]]]:
-        # lock rows to allow safe parallel workers (multiple containers)
         lock_clause = "FOR UPDATE SKIP LOCKED" if self.cfg.lock_rows else ""
         q = f"""
             SELECT {self.cfg.id_column},
@@ -70,7 +62,6 @@ class DeadlinesJob:
 
         while processed < args.max_rows:
             try:
-                # ONE row per transaction => commit immediately after each successful update
                 with conn.transaction():
                     with conn.cursor() as cur:
                         row = self._select_one(cur)
@@ -109,10 +100,7 @@ class DeadlinesJob:
                             self._update_row(cur, row_id, pr.fall, pr.spring)
                             updated += 1
 
-                # leaving `with conn.transaction()` commits immediately per row
-
             except Exception as e:
-                # Don't let one bad row stop the job
                 log.exception("Row processing failed (continuing). error=%s", type(e).__name__)
                 continue
 

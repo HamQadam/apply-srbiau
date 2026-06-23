@@ -17,6 +17,7 @@ from app.models import (
     University,
     User,
     DEFAULT_CHECKLIST,
+    NOTE_CATEGORIES,
     GhadamTransaction,
     TransactionType,
     FIRST_PROGRAM_BONUS,
@@ -25,6 +26,55 @@ from app.models import (
 from app.services.auth import get_current_user
 
 router = APIRouter(prefix="/tracker", tags=["tracker"])
+
+
+REMINDER_OFFSETS_DEFAULT = [30, 14, 7, 1]
+
+
+def get_program_title(tp: TrackedProgram) -> str:
+    return tp.custom_program_name or (tp.course.name if tp.course else "Unknown")
+
+
+def get_university_title(tp: TrackedProgram) -> str:
+    return tp.custom_university_name or (
+        tp.course.university.name if tp.course and tp.course.university else "Unknown"
+    )
+
+
+def get_effective_deadline(tp: TrackedProgram) -> Optional[date]:
+    return tp.deadline or (tp.course.deadline_fall if tp.course else None) or tp.custom_deadline
+
+
+def get_reminder_offsets(tp: TrackedProgram) -> List[int]:
+    raw_offsets = tp.reminder_offsets_days or REMINDER_OFFSETS_DEFAULT
+    cleaned = sorted({int(offset) for offset in raw_offsets if isinstance(offset, int) and 0 <= offset <= 365}, reverse=True)
+    return cleaned or REMINDER_OFFSETS_DEFAULT
+
+
+def normalize_checklist_item(item: dict, index: int = 0) -> dict:
+    normalized = dict(item)
+    normalized.setdefault("id", f"custom_{index}_{datetime.utcnow().timestamp()}")
+    normalized.setdefault("name", "New Item")
+    normalized["required"] = bool(normalized.get("required", False))
+    normalized["completed"] = bool(normalized.get("completed", False))
+    normalized.setdefault("notes", None)
+    normalized.setdefault("due_date", None)
+    return normalized
+
+
+def checklist_summary(items: Optional[List[dict]]) -> dict:
+    checklist = items or []
+    required = [item for item in checklist if item.get("required")]
+    pending = [item for item in checklist if not item.get("completed")]
+    pending_required = [item for item in pending if item.get("required")]
+    return {
+        "total": len(checklist),
+        "completed": len([item for item in checklist if item.get("completed")]),
+        "required_total": len(required),
+        "required_completed": len([item for item in required if item.get("completed")]),
+        "pending_documents": pending,
+        "pending_required_documents": pending_required,
+    }
 
 
 def enrich_tracked_program(tp: TrackedProgram, session: Session) -> TrackedProgramRead:
@@ -105,6 +155,7 @@ def add_program(
         notes=data.notes,
         deadline=data.custom_deadline,
         document_checklist=[item.copy() for item in DEFAULT_CHECKLIST],
+        reminder_offsets_days=REMINDER_OFFSETS_DEFAULT,
     )
     
     session.add(tp)
@@ -265,8 +316,8 @@ def get_stats(
     today = date.today()
     deadline_cutoff = today + timedelta(days=30)
     stats.upcoming_deadlines = len([
-        p for p in programs 
-        if p.deadline and today <= p.deadline <= deadline_cutoff
+        p for p in programs
+        if (deadline := get_effective_deadline(p)) and today <= deadline <= deadline_cutoff
     ])
     
     return stats
@@ -278,30 +329,131 @@ def get_deadlines(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
-    """Get upcoming deadlines."""
+    """Get upcoming deadlines using tracker override, catalogue, or custom date."""
     today = date.today()
     cutoff = today + timedelta(days=days)
-    
+    overdue_floor = today - timedelta(days=30)
+
     programs = session.exec(
         select(TrackedProgram)
         .where(TrackedProgram.user_id == current_user.id)
-        .where(TrackedProgram.deadline != None)
-        .where(TrackedProgram.deadline >= today)
-        .where(TrackedProgram.deadline <= cutoff)
-        .order_by(TrackedProgram.deadline)
     ).all()
-    
-    return [
-        {
+
+    deadline_items = []
+    for tp in programs:
+        deadline = get_effective_deadline(tp)
+        if not deadline or deadline < overdue_floor or deadline > cutoff:
+            continue
+        days_until = (deadline - today).days
+        deadline_items.append({
             "id": tp.id,
-            "program_name": tp.custom_program_name or (tp.course.name if tp.course else "Unknown"),
-            "university_name": tp.custom_university_name or (tp.course.university.name if tp.course and tp.course.university else "Unknown"),
-            "deadline": tp.deadline,
-            "days_until": (tp.deadline - today).days,
+            "program_name": get_program_title(tp),
+            "university_name": get_university_title(tp),
+            "deadline": deadline,
+            "days_until": days_until,
             "status": tp.status.value,
-        }
-        for tp in programs
-    ]
+            "urgency": "overdue" if days_until < 0 else "today" if days_until == 0 else "urgent" if days_until <= 7 else "soon" if days_until <= 30 else "future",
+        })
+
+    return sorted(deadline_items, key=lambda item: item["deadline"])
+
+
+@router.get("/reminders")
+def get_reminders(
+    days: int = Query(default=90, ge=1, le=365),
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Return reminder schedule candidates for upcoming deadlines.
+
+    This endpoint is intentionally delivery-agnostic: a later email/push worker can
+    consume the same records while the UI can show users what will happen.
+    """
+    today = date.today()
+    cutoff = today + timedelta(days=days)
+    programs = session.exec(
+        select(TrackedProgram)
+        .where(TrackedProgram.user_id == current_user.id)
+    ).all()
+
+    reminders = []
+    for tp in programs:
+        if not tp.reminders_enabled:
+            continue
+        deadline = get_effective_deadline(tp)
+        if not deadline:
+            continue
+        for offset in get_reminder_offsets(tp):
+            reminder_date = deadline - timedelta(days=offset)
+            if today <= reminder_date <= cutoff:
+                reminders.append({
+                    "program_id": tp.id,
+                    "program_name": get_program_title(tp),
+                    "university_name": get_university_title(tp),
+                    "reminder_date": reminder_date,
+                    "deadline": deadline,
+                    "offset_days": offset,
+                    "days_until_deadline": (deadline - today).days,
+                    "status": tp.status.value,
+                })
+
+    return sorted(reminders, key=lambda item: (item["reminder_date"], item["deadline"]))
+
+
+@router.get("/export")
+def export_application_plan(
+    program_id: Optional[int] = Query(default=None),
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    """Return a printable/exportable application plan payload."""
+    query = select(TrackedProgram).where(TrackedProgram.user_id == current_user.id)
+    if program_id is not None:
+        query = query.where(TrackedProgram.id == program_id)
+
+    programs = session.exec(query).all()
+    if program_id is not None and not programs:
+        raise HTTPException(status_code=404, detail="Program not found")
+
+    plan_programs = []
+    for tp in programs:
+        deadline = get_effective_deadline(tp)
+        summary = checklist_summary(tp.document_checklist)
+        plan_programs.append({
+            "id": tp.id,
+            "program_name": get_program_title(tp),
+            "university_name": get_university_title(tp),
+            "country": tp.custom_country or (tp.course.university.country if tp.course and tp.course.university else None),
+            "status": tp.status.value,
+            "priority": tp.priority.value,
+            "intake": tp.intake.value if tp.intake else None,
+            "deadline": deadline,
+            "submitted_date": tp.submitted_date,
+            "result_date": tp.result_date,
+            "interview_date": tp.interview_date,
+            "application_portal_url": tp.application_portal_url,
+            "application_id": tp.application_id,
+            "checklist": summary,
+            "notes_count": len(tp.notes_entries or []),
+            "reminders_enabled": tp.reminders_enabled,
+            "reminder_offsets_days": get_reminder_offsets(tp),
+            "next_reminder_at": tp.next_reminder_at,
+            "match_score": tp.match_score,
+        })
+
+    plan_programs.sort(key=lambda item: (item["deadline"] is None, item["deadline"] or date.max, item["program_name"]))
+    return {
+        "generated_at": datetime.utcnow(),
+        "programs": plan_programs,
+        "summary": {
+            "total_programs": len(plan_programs),
+            "upcoming_deadlines_30_days": len([
+                item for item in plan_programs
+                if item["deadline"] and date.today() <= item["deadline"] <= date.today() + timedelta(days=30)
+            ]),
+            "pending_required_documents": sum(len(item["checklist"]["pending_required_documents"]) for item in plan_programs),
+        },
+    }
 
 
 @router.patch("/programs/{program_id}/checklist")
@@ -316,12 +468,7 @@ def update_checklist(
     if not tp or tp.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Program not found")
     
-    # Ensure each item has an id
-    for i, item in enumerate(checklist):
-        if "id" not in item:
-            item["id"] = f"custom_{i}_{datetime.utcnow().timestamp()}"
-    
-    tp.document_checklist = checklist
+    tp.document_checklist = [normalize_checklist_item(item, i) for i, item in enumerate(checklist)]
     tp.updated_at = datetime.utcnow()
     
     session.commit()
@@ -351,7 +498,8 @@ def add_checklist_item(
         "name": item.get("name", "New Item"),
         "required": item.get("required", False),
         "completed": False,
-        "notes": item.get("notes")
+        "notes": item.get("notes"),
+        "due_date": item.get("due_date"),
     }
     
     tp.document_checklist.append(new_item)
@@ -455,7 +603,7 @@ def add_note_entry(
         tp.notes_entries = []
     
     # Validate category
-    valid_categories = ["important", "contact", "link", "reminder", "general"]
+    valid_categories = NOTE_CATEGORIES
     category = entry.get("category", "general")
     if category not in valid_categories:
         category = "general"
@@ -502,7 +650,7 @@ def update_note_entry(
             if "content" in data:
                 entry["content"] = data["content"]
             if "category" in data:
-                valid_categories = ["important", "contact", "link", "reminder", "general"]
+                valid_categories = NOTE_CATEGORIES
                 if data["category"] in valid_categories:
                     entry["category"] = data["category"]
             if "pinned" in data:

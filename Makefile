@@ -35,6 +35,20 @@ up-back:
 postprocess-deadlines:
 	 $(COMPOSE) run --build --rm deadline-refiner
 
+# Stage 2: lexical parse (pending → courses/universities, or needs_llm)
+postprocess-parse:
+	 $(COMPOSE) run --build --rm parse-raw
+
+# Stage 3: LLM enrichment (needs_llm → done)
+postprocess-llm:
+	 $(COMPOSE) run --build --rm llm-enrich
+
+# Run the full postprocess pipeline in order: parse → LLM → deadlines
+postprocess-all:
+	 $(COMPOSE) run --build --rm parse-raw
+	 $(COMPOSE) run --rm llm-enrich
+	 $(COMPOSE) run --rm deadline-refiner
+
 exec:
 	 $(COMPOSE) exec $(container) sh
 
