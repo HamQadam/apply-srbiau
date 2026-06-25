@@ -28,98 +28,132 @@
     "userFallback": "User"
   },
   "home": {
-    "heroTitleLine1": "Track Your University Applications.",
-    "heroTitleLine2": "Learn from Success Stories.",
-    "heroSubtitle": "Keep all your applications organized in one place. See how others with similar backgrounds got accepted to your dream schools.",
-    "cta": {
-      "start": "Start Tracking - It's Free",
-      "browse": "Browse Programs",
-      "dashboard": "Go to Dashboard",
-      "title": "Ready to get organized?",
-      "subtitle": "Join thousands of students tracking their applications with Ghadam."
+    "hero": {
+      "headline": "You don't have to figure\nthis out alone.",
+      "subheadline": "Ghadam maps the path to studying abroad — programs, deadlines, documents, and the stories of people who got there before you.",
+      "ctaPrimary": "Start for free",
+      "ctaSecondary": "Browse programs",
+      "ctaDashboard": "Go to my dashboard",
+      "tagline": "Persian-first. Built for Iranian applicants."
     },
-    "features": {
-      "title": "Everything you need to stay organized",
-      "track": {
-        "title": "Track Applications",
-        "description": "Keep track of all your programs, deadlines, and documents in one organized dashboard."
+    "clarity": {
+      "label": "What you get",
+      "headline": "One place for everything.",
+      "body": "Add your target programs. Track deadlines. See what documents you need. Get matched with programs that fit your profile. Read what previous applicants went through.",
+      "statPrograms": "programs across Europe",
+      "statUniversities": "universities catalogued",
+      "statCountries": "countries covered"
+    },
+    "stories": {
+      "headline": "Real applicants. Real outcomes.",
+      "subheadline": "Anonymous stories from students who went through the same process.",
+      "card1": {
+        "program": "Computer Science MSc",
+        "university": "TU Delft",
+        "country": "Netherlands",
+        "outcome": "Accepted",
+        "scholarship": "Scholarship received",
+        "year": "2024",
+        "excerpt": "The most helpful thing was seeing that someone from my exact GPA and field had been accepted. I was unsure if my profile was competitive — seeing a real case made it concrete."
       },
-      "learn": {
-        "title": "Learn from Others",
-        "description": "See success stories from students with similar backgrounds who got into your target schools."
+      "card2": {
+        "program": "Electrical Engineering MSc",
+        "university": "TU Berlin",
+        "country": "Germany",
+        "outcome": "Accepted",
+        "scholarship": "No scholarship",
+        "year": "2023",
+        "excerpt": "The deadline tracking alone saved me. I was managing five applications across three countries. Having the checklist per program kept me from missing anything."
       },
-      "earn": {
-        "title": "Earn Ghadam Coins",
-        "description": "Share your journey after you get results and earn coins. Help future students succeed."
+      "card3": {
+        "program": "Data Science MSc",
+        "university": "University of Amsterdam",
+        "country": "Netherlands",
+        "outcome": "Accepted",
+        "scholarship": "Partial scholarship",
+        "year": "2024",
+        "excerpt": "I found out about this program through the Explore filter — I had no idea it existed. Now I'm here."
+      },
+      "cta": "Read more experiences"
+    },
+    "destinations": {
+      "headline": "Germany, Netherlands, and expanding.",
+      "germany": {
+        "name": "Germany",
+        "stat": "programs available",
+        "note": "DAAD-sourced data"
+      },
+      "netherlands": {
+        "name": "Netherlands",
+        "stat": "programs available",
+        "note": "Study in NL data"
+      },
+      "expanding": {
+        "name": "More coming",
+        "stat": "Sweden, Finland, France",
+        "note": "In progress"
       }
     },
-    "how": {
-      "title": "How Ghadam Works",
-      "step1": {
-        "title": "Add your target programs",
-        "description": "Search our database or add custom programs. Track deadlines, documents, and status."
-      },
-      "step2": {
-        "title": "Discover success stories",
-        "description": "See how many students from your university got into each program. Use your Ghadam coins to view their full profiles."
-      },
-      "step3": {
-        "title": "Share your journey",
-        "description": "After you get your results, share your experience. Earn 70% of the coins when others view your profile."
-      }
+    "finalCta": {
+      "headline": "Start with what you know.",
+      "body": "Add one program. See one deadline. That's enough to begin.",
+      "cta": "Create your free account"
     },
-    "footer": "(c) {{year}} Ghadam. Built with care for students everywhere."
+    "footer": "© {{year}} Ghadam. Built for Iranian students, by people who get it."
   },
   "dashboard": {
-    "title": "Your Dashboard",
-    "greeting": "Hey {{name}}!",
+    "title": "Dashboard",
+    "greeting": "{{name}}",
+    "greetingFallback": "Your applications",
     "subtitle": "Track and manage your applications",
-    "findPrograms": "Find Programs",
-    "addProgram": "Add Program",
+    "findPrograms": "Find programs",
+    "addProgram": "Add program",
     "loadError": "Failed to load dashboard.",
     "statusUpdated": "Status updated",
     "statusUpdateError": "Failed to update status",
-    "confirmRemove": "Remove this program from your tracker?",
     "programRemoved": "Program removed",
     "programRemoveError": "Failed to remove program",
-    "stats": {
-      "totalPrograms": "Total Programs",
-      "accepted": "Accepted",
-      "pending": "Pending",
-      "deadlinesSoon": "Deadlines Soon",
-      "docsReady": "Docs Ready"
+    "printPlan": "Print plan",
+    "exportError": "Could not prepare the application plan.",
+    "confirmDeleteTitle": "Remove this program?",
+    "confirmDeleteDescription": "This will remove {{name}} from your tracker, including its checklist and notes.",
+    "situation": {
+      "nextDeadline": "Next deadline",
+      "daysLeft": "{{count}} days",
+      "daysLeft_one": "{{count}} day",
+      "today": "Today",
+      "overdue": "Overdue",
+      "noDeadlines": "No upcoming deadlines",
+      "noDeadlinesHint": "Add a program with a deadline to start tracking.",
+      "programsTracked_one": "{{count}} program tracked",
+      "programsTracked_other": "{{count}} programs tracked",
+      "docsProgress": "{{done}} of {{total}} documents complete"
     },
     "programs": {
-      "title": "Your Programs",
+      "title": "Your programs",
+      "sortedByDeadline": "Sorted by deadline",
       "count_one": "{{count}} program",
       "count_other": "{{count}} programs",
       "emptyTitle": "No programs yet",
-      "emptySubtitle": "Start by finding programs that match your profile or add one manually",
-      "findMatching": "Find Matching Programs",
-      "addManual": "Add Manually"
+      "emptyBody": "Start by finding programs that match your profile, or add one you already have in mind.",
+      "emptyCtaFind": "Browse programs",
+      "emptyCtaAdd": "Add manually",
+      "showMore": "Show {{count}} more",
+      "showLess": "Show less"
     },
     "deadlines": {
-      "title": "Upcoming Deadlines"
+      "title": "Upcoming deadlines",
+      "empty": "No deadlines to show"
     },
     "profileCard": {
-      "title": "Get Personalized Recommendations",
-      "subtitle": "Complete your profile to find programs that match your goals",
-      "cta": "Complete Profile"
+      "title": "Get matched programs",
+      "body": "Complete your profile to receive program recommendations based on your GPA, field, and goals.",
+      "cta": "Complete profile"
     },
     "balance": {
-      "title": "Ghadam Balance",
-      "subtitle": "Use coins to unlock detailed profiles"
-    },
-    "tips": {
-      "title": "Tips",
-      "first": "Complete your profile to get AI-powered program matches",
-      "second": "Use the document checklist to stay organized",
-      "third": "Share your journey after results to earn coins"
-    },
-    "printPlan": "Print plan",
-    "exportError": "Could not prepare the application plan.",
-    "confirmDeleteTitle": "Remove tracked program?",
-    "confirmDeleteDescription": "This will remove {{name}} from your tracker, including its checklist and notes."
+      "title": "Ghadam coins",
+      "subtitle": "Use to unlock full applicant stories"
+    }
   },
   "deadlines": {
     "empty": "No upcoming deadlines in the next 30 days",
@@ -367,43 +401,33 @@
     }
   },
   "addProgram": {
-    "title": "Add Program to Tracker",
-    "subtitle": "Search our database or add a custom program",
-    "searchMode": "Search Programs",
-    "customMode": "Add Custom",
-    "findProgram": "Find Program",
-    "searchPlaceholder": "Search by program name or university...",
-    "searchError": "Search failed",
-    "startTyping": "Start typing to search for programs",
-    "change": "Change",
-    "noResults": "No results found. Try adding it manually.",
-    "switchToCustom": "Switch to Custom Add",
-    "customTitle": "Custom Program",
-    "programName": "Program Name *",
-    "programPlaceholder": "e.g., MSc Computer Science",
-    "universityName": "University Name *",
-    "universityPlaceholder": "e.g., Technical University of Munich",
-    "country": "Country",
-    "countryPlaceholder": "e.g., Germany",
-    "deadline": "Application Deadline",
-    "detailsTitle": "Application Details",
+    "title": "Add a program",
+    "subtitle": "Search the catalogue or add a program you found yourself.",
+    "searchMode": "Search catalogue",
+    "customMode": "Add manually",
+    "searchPlaceholder": "Search by program or university name",
+    "searching": "Searching...",
+    "noResults": "No programs found. Try a different search, or add it manually.",
+    "selected": "Selected program",
+    "changeProgram": "Change",
+    "customProgram": "Programme name",
+    "customUniversity": "University name",
+    "customCountry": "Country (optional)",
+    "customDeadline": "Application deadline (optional)",
     "priority": "Priority",
-    "intake": "Intake",
-    "intakeUnsure": "Not sure yet",
-    "notesLabel": "Notes (optional)",
-    "notesPlaceholder": "Any notes about this application...",
-    "cancel": "Cancel",
-    "submit": "Add to Tracker",
-    "adding": "Adding...",
-    "missingDetails": "Please select a program or fill in custom details",
-    "successToast": "Program added",
-    "successTitle": "Added {{name}}",
-    "successSubtitle": "Your tracker is ready for the next step.",
-    "nextSteps": "Next steps: add your first document or set a reminder.",
-    "goDashboard": "Go to Dashboard",
-    "setReminder": "Set a reminder",
-    "closeModal": "Close",
-    "error": "Failed to add program"
+    "intake": "Intake / semester",
+    "notes": "Notes (optional)",
+    "notesPlaceholder": "Early notes about this application",
+    "submit": "Add to tracker",
+    "submitting": "Adding...",
+    "successToast": "Program added to your tracker",
+    "successTitle": "Added to your tracker",
+    "successBody": "{{name}} is now in your tracker.",
+    "addAnother": "Add another",
+    "goToDashboard": "Go to dashboard",
+    "missingDetails": "Please fill in all required fields",
+    "searchError": "Search failed. Please try again.",
+    "error": "Could not add program. Please try again."
   },
   "auth": {
     "welcomeTitle": "Welcome to Ghadam",
@@ -623,7 +647,9 @@
       "searchPlaceholder": "Search programme",
       "countryPlaceholder": "Country",
       "allOutcomes": "All outcomes",
-      "scholarshipLabel": "Scholarship"
+      "scholarshipLabel": "Scholarship",
+      "label": "Filter experiences",
+      "active": "{{count}} filters active"
     },
     "status": {
       "accepted": "Accepted",
@@ -638,6 +664,70 @@
       "fullProfile": "Full profile · {{price}} coins"
     },
     "empty": "No approved experiences match these filters yet.",
-    "loadError": "Could not load experiences"
+    "loadError": "Could not load experiences",
+    "clearFilters": "Clear filters",
+    "resultCount_one": "{{count}} experience",
+    "resultCount_other": "{{count}} experiences",
+    "outcome": "Outcome",
+    "contribute": {
+      "title": "Share your experience",
+      "body": "Got a result? Help the next applicant understand what to expect.",
+      "cta": "Write your experience"
+    }
+  },
+  "experienceSubmit": {
+    "title": "Share your application experience",
+    "subtitle": "Your experience will be reviewed before appearing publicly. Real stories help future applicants prepare.",
+    "backToProgram": "Back to program",
+    "backToExperiences": "Back to experiences",
+    "sections": {
+      "program": "About the application",
+      "timeline": "Timeline",
+      "outcome": "Outcome and funding",
+      "story": "Your experience",
+      "privacy": "Privacy and visibility"
+    },
+    "fields": {
+      "program": "Programme name",
+      "university": "University",
+      "universityHint": "Select from catalogue when possible.",
+      "universityPlaceholder": "Search university or type a name",
+      "country": "Country",
+      "city": "City (optional)",
+      "degree": "Degree level",
+      "year": "Application year",
+      "round": "Intake / round",
+      "decisionMonth": "Decision month",
+      "outcome": "Outcome",
+      "visibility": "Visibility",
+      "scholarshipApplied": "Applied for funding",
+      "scholarshipReceived": "Received funding",
+      "wouldRecommend": "Would recommend this programme",
+      "mainExperience": "Main experience",
+      "mainExperiencePlaceholder": "Describe your timeline, documents, result, funding, and anything practical. At least 20 characters.",
+      "mainExperienceHint": "{{count}}/20 minimum",
+      "interviewExperience": "Interview experience (optional)",
+      "advice": "Advice for future applicants (optional)"
+    },
+    "visibility": {
+      "anonymized": "Anonymized — name and details hidden",
+      "public": "Public — full profile visible",
+      "private": "Private — only you can see this"
+    },
+    "piiWarning": "I confirm this experience does not contain passport numbers, application IDs, email addresses, phone numbers, or other personal data about myself or others.",
+    "validation": {
+      "incomplete": "Please complete: {{items}}",
+      "programmeName": "programme name",
+      "university": "university",
+      "country": "country",
+      "storyLength": "story needs {{count}} more characters",
+      "pii": "privacy confirmation"
+    },
+    "submit": "Submit for review",
+    "submitting": "Submitting...",
+    "cancel": "Cancel",
+    "successDraft": "Experience saved privately",
+    "successPublic": "Experience submitted for review — thank you",
+    "loadError": "Could not load programme details"
   }
 }

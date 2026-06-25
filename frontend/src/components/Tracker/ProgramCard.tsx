@@ -46,7 +46,7 @@ export function ProgramCard({ program, onStatusChange, onDelete }: ProgramCardPr
   return (
     <motion.div
       whileHover={{ y: -2 }}
-      className="bg-surface rounded-2xl border border-border p-5 hover:shadow-lg hover:shadow-brand-primary/10 transition-all group"
+              className="bg-surface rounded-xl border border-border p-5 hover:shadow-[0_4px_16px_rgba(13,115,119,0.10)] transition-all group"
     >
       <div className="flex items-start justify-between">
         <div className="flex-1 min-w-0">
@@ -150,11 +150,9 @@ export function ProgramCard({ program, onStatusChange, onDelete }: ProgramCardPr
           <div className="w-full h-2 bg-elevated rounded-full overflow-hidden">
             <div 
               className={cn(
-                'h-full rounded-full transition-all',
-                progressPercent === 100
-                  ? 'bg-gradient-to-r from-status-success to-brand-accent'
-                  : 'bg-gradient-to-r from-brand-primary to-brand-secondary'
-              )}
+                  'h-full rounded-full transition-all',
+                  progressPercent === 100 ? 'bg-status-success' : 'bg-brand-primary'
+                )}
               style={{ width: `${progressPercent}%` }}
             />
           </div>
