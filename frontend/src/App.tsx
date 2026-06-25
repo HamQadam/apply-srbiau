@@ -13,6 +13,9 @@ import { ExplorePage } from './pages/Explore/ExplorePage';
 import { CourseDetailPage } from './pages/Explore/CourseDetailPage';
 import { RecommendationsPage } from './pages/Recommendations/RecommendationsPage';
 import { SettingsPage } from './pages/Settings/SettingsPage';
+import { ExperienceBrowsePage } from './pages/Experiences/ExperienceBrowsePage';
+import { ExperienceSubmitPage } from './pages/Experiences/ExperienceSubmitPage';
+import { AdminExperienceReviewPage } from './pages/Experiences/AdminExperienceReviewPage';
 import { Spinner } from './components/Feedback/Spinner';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -47,6 +50,7 @@ function AppRoutes() {
           <Route index element={<HomePage />} />
           <Route path="explore" element={<ExplorePage />} />
           <Route path="courses/:id" element={<CourseDetailPage />} />
+          <Route path="experiences" element={<ExperienceBrowsePage />} />
         </Route>
         
         {/* Auth routes */}
@@ -81,6 +85,31 @@ function AppRoutes() {
           <Route index element={
             <ProtectedRoute>
               <RecommendationsPage />
+            </ProtectedRoute>
+          } />
+        </Route>
+
+        {/* Experiences route */}
+        <Route path="/experiences/share" element={<Layout />}>
+          <Route index element={
+            <ProtectedRoute>
+              <ExperienceSubmitPage />
+            </ProtectedRoute>
+          } />
+        </Route>
+
+        <Route path="/experiences/share/:programId" element={<Layout />}>
+          <Route index element={
+            <ProtectedRoute>
+              <ExperienceSubmitPage />
+            </ProtectedRoute>
+          } />
+        </Route>
+
+        <Route path="/admin/experiences" element={<Layout />}>
+          <Route index element={
+            <ProtectedRoute>
+              <AdminExperienceReviewPage />
             </ProtectedRoute>
           } />
         </Route>

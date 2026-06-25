@@ -1,4 +1,4 @@
-COMPOSE=docker compose -f deploy/compose.yml
+COMPOSE=docker compose -f deploy/compose.yml --env-file .env
 LOCAL_BASE_URL?=http://localhost
 SEED_ENV=DEBUG=true DEBUG_OTP=true
 
@@ -46,8 +46,8 @@ postprocess-llm:
 # Run the full postprocess pipeline in order: parse → LLM → deadlines
 postprocess-all:
 	 $(COMPOSE) run --build --rm parse-raw
-	 $(COMPOSE) run --rm llm-enrich
-	 $(COMPOSE) run --rm deadline-refiner
+	 $(COMPOSE) run --build --rm llm-enrich
+	 $(COMPOSE) run --build --rm deadline-refiner
 
 exec:
 	 $(COMPOSE) exec $(container) sh

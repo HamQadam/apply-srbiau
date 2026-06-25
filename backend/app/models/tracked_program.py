@@ -103,6 +103,8 @@ class TrackedProgramBase(SQLModel):
     
     # Did user share this journey?
     shared_as_experience: bool = Field(default=False)
+    shared_experience_id: Optional[int] = Field(default=None, foreign_key="applications.id")
+    shared_at: Optional[datetime] = Field(default=None)
     
     # Match score from recommendations (0-100)
     match_score: Optional[int] = Field(default=None)
@@ -169,6 +171,9 @@ class TrackedProgramUpdate(SQLModel):
     match_warnings: Optional[List[str]] = None
     matching_profile_snapshot: Optional[dict] = None
     recommendation_snapshot: Optional[dict] = None
+    shared_as_experience: Optional[bool] = None
+    shared_experience_id: Optional[int] = None
+    shared_at: Optional[datetime] = None
 
 
 class TrackedProgramRead(TrackedProgramBase):
@@ -187,13 +192,15 @@ class TrackedProgramRead(TrackedProgramBase):
     university_ranking_qs: Optional[int] = None
     degree_level: Optional[str] = None
     program_deadline: Optional[date] = None  # From course, if linked
-    
     # Match score
     match_score: Optional[int] = None
     match_reasons: Optional[List[str]] = None
     match_warnings: Optional[List[str]] = None
     matching_profile_snapshot: Optional[dict] = None
     recommendation_snapshot: Optional[dict] = None
+    shared_as_experience: Optional[bool] = None
+    shared_experience_id: Optional[int] = None
+    shared_at: Optional[datetime] = None
 
 
 class TrackerStats(SQLModel):

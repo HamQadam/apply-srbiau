@@ -18,6 +18,7 @@ export interface User {
   auth_provider?: 'phone' | 'google';
   picture_url?: string | null;
   email_verified?: boolean | null;
+  is_admin?: boolean;
 }
 
 export type UserGoal = 'applying' | 'applied' | 'browsing';
@@ -380,6 +381,86 @@ export interface PrintablePlan {
     upcoming_deadlines_30_days: number;
     pending_required_documents: number;
   };
+}
+
+
+export type ExperienceVisibility = 'private' | 'anonymized' | 'public';
+export type ExperienceModerationStatus = 'draft' | 'submitted' | 'approved' | 'rejected' | 'hidden';
+export type ExperienceApplicationStatus = 'preparing' | 'submitted' | 'under_review' | 'interview' | 'accepted' | 'rejected' | 'waitlisted' | 'withdrawn';
+export type ExperienceDegreeLevel = 'masters' | 'phd' | 'mba' | 'postdoc';
+
+export interface PublicExperience {
+  id: number;
+  university_id: number | null;
+  course_id: number | null;
+  university_name: string | null;
+  country: string | null;
+  city: string | null;
+  program_name: string;
+  department: string | null;
+  degree_level: ExperienceDegreeLevel;
+  application_year: number;
+  application_round: string | null;
+  status: ExperienceApplicationStatus;
+  decision_date: string | null;
+  scholarship_applied: boolean;
+  scholarship_received: boolean;
+  scholarship_name: string | null;
+  scholarship_amount: string | null;
+  notes: string | null;
+  interview_experience: string | null;
+  advice_for_applicants: string | null;
+  timeline_notes: string | null;
+  would_recommend: boolean | null;
+  visibility: ExperienceVisibility;
+  view_price: number;
+  requires_unlock: boolean;
+  applicant_display_name: string | null;
+  applicant_degree_level: string | null;
+  applicant_major: string | null;
+  created_at: string;
+}
+
+export interface ExperienceRecord extends PublicExperience {
+  applicant_id: number;
+  application_deadline: string | null;
+  submitted_date: string | null;
+  how_found: string | null;
+  moderation_status: ExperienceModerationStatus;
+  pii_warning_accepted: boolean;
+  source_tracked_program_id: number | null;
+  submitted_for_review_at: string | null;
+  reviewed_at: string | null;
+  reviewer_id: number | null;
+  moderation_notes: string | null;
+}
+
+export interface ExperienceSubmission {
+  visibility: ExperienceVisibility;
+  status?: ExperienceApplicationStatus;
+  program_name?: string;
+  university_name?: string;
+  country?: string;
+  city?: string;
+  university_id?: number;
+  course_id?: number;
+  degree_level?: ExperienceDegreeLevel;
+  application_year: number;
+  application_round?: string;
+  application_deadline?: string | null;
+  submitted_date?: string | null;
+  decision_date?: string | null;
+  scholarship_applied?: boolean;
+  scholarship_received?: boolean;
+  scholarship_name?: string;
+  scholarship_amount?: string;
+  notes: string;
+  interview_experience?: string;
+  advice_for_applicants?: string;
+  timeline_notes?: string;
+  how_found?: string;
+  would_recommend?: boolean | null;
+  pii_warning_accepted: boolean;
 }
 
 // Ghadam

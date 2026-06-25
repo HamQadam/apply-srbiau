@@ -1,27 +1,19 @@
 """
 Stage-2: Lexical parse job.
 
-Reads raw_crawl_items WHERE parse_status='pending', runs the appropriate
-source transformer, and either:
+Reads raw_crawl_items WHERE parse_status IN ('pending','failed'), runs the
+appropriate source transformer, and either:
   - Upserts university + course rows (parse_status → 'parsed')
   - Flags the row for LLM processing (parse_status → 'needs_llm')
 
-The existing `deadlines` job still runs afterwards to fill in
-deadline_fall / deadline_spring from deadline_notes, so we don't need to
-fully resolve dates here — we just store what we can.
-
-University deduplication uses the same fuzzy-match logic that was previously
-in the crawler's PgStore (rapidfuzz ratio >= 90 for universities, >= 92 for
-courses), preserving the wise-patch behaviour (never overwrite existing data).
+One transaction per row — a single bad row never aborts the whole batch.
 """
 from __future__ import annotations
 
 import json
 import logging
 import re
-import time
-from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
 import psycopg
 
@@ -31,12 +23,49 @@ from ..transformers import get_transformer, ParsedItem
 
 log = logging.getLogger(__name__)
 
-# Columns we never try to insert/update directly (handled by DB/constraints)
-_SKIP_COLS = frozenset({"id", "created_at", "university_id"})
+# Columns skipped when building a generic INSERT (handled separately or by DB)
+_INSERT_SKIP = frozenset({"id", "created_at", "updated_at"})
+
+# varchar(n) limits for columns we write — prevents StringDataRightTruncation.
+# Values are the DB column sizes from the schema migrations.
+_VARCHAR_LIMITS: dict[str, int] = {
+    "name":                 300,   # courses.name
+    "field":                200,   # courses.field
+    "deadline_notes":       500,
+    "notes":               1000,
+    "description":         3000,
+    "scholarship_details": 1000,
+    "program_url":          500,   # reuse for varchar(500) cols
+    "application_url":      500,
+    # universities
+    "city":                 100,
+    "country":              100,
+    "website":              300,
+    "logo_url":             500,
+}
+
+
+def _truncate(key: str, value: Any) -> Any:
+    """Truncate string values to their column limit, adding '…' suffix."""
+    if not isinstance(value, str):
+        return value
+    limit = _VARCHAR_LIMITS.get(key)
+    if limit and len(value) > limit:
+        return value[: limit - 1] + "…"
+    return value
+
+
+def _clean_payload(payload: dict[str, Any], skip: frozenset[str]) -> dict[str, Any]:
+    """Drop skip-cols, None values, and truncate strings."""
+    return {
+        k: _truncate(k, v)
+        for k, v in payload.items()
+        if k not in skip and v is not None
+    }
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Fuzzy match helpers  (mirror of what was in crawlers/db.py)
+# Fuzzy match helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _norm(s: str) -> str:
@@ -70,10 +99,7 @@ def _fuzzy_best(
 
 
 def _wise_patch(existing: dict[str, Any], new: dict[str, Any]) -> dict[str, Any]:
-    """
-    Build a patch dict that only fills empty fields or refreshes certain
-    mutable fields.  Never overwrites data that already exists.
-    """
+    """Only fill empty fields or refresh certain mutable fields."""
     patch: dict[str, Any] = {}
     for k, v in new.items():
         if v is None:
@@ -91,15 +117,7 @@ def _wise_patch(existing: dict[str, Any], new: dict[str, Any]) -> dict[str, Any]
 # DB helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _build_set_clause(keys: list[str]) -> str:
-    return ", ".join(f"{k} = %s" for k in keys)
-
-
-def _upsert_university(
-    cur: psycopg.Cursor,
-    payload: dict[str, Any],
-) -> int:
-    """Fuzzy-match or insert university.  Returns university id."""
+def _upsert_university(cur: psycopg.Cursor, payload: dict[str, Any]) -> int:
     name = payload.get("name") or "Unknown"
     country = payload.get("country") or "Unknown"
 
@@ -112,15 +130,15 @@ def _upsert_university(
         """,
         (country, f"%{name[:40]}%"),
     )
-    candidates = [dict(zip([d[0] for d in cur.description], row)) for row in cur.fetchall()]
+    cols = [d[0] for d in cur.description]
+    candidates = [dict(zip(cols, row)) for row in cur.fetchall()]
     best = _fuzzy_best(name, candidates, key="name", min_score=90)
 
     if best:
         uni_id = int(best["id"])
-        patch = _wise_patch(best, payload)
+        patch = _clean_payload(_wise_patch(best, payload), _INSERT_SKIP)
         if patch:
-            patch["updated_at"] = "NOW()"
-            keys = [k for k in patch if k != "updated_at"]
+            keys = list(patch.keys())
             vals = [patch[k] for k in keys]
             set_sql = ", ".join(f"{k} = %s" for k in keys) + ", updated_at = NOW()"
             cur.execute(
@@ -129,22 +147,19 @@ def _upsert_university(
             )
         return uni_id
 
-    # Insert
-    clean = {k: v for k, v in payload.items() if k not in _SKIP_COLS and v is not None}
-    cols = list(clean.keys())
-    vals = [clean[k] for k in cols]
+    clean = _clean_payload(payload, _INSERT_SKIP)
+    cols_list = list(clean.keys())
+    vals = [clean[k] for k in cols_list]
     ph = ", ".join(["%s"] * len(vals))
     cur.execute(
-        f"INSERT INTO universities ({', '.join(cols)}, created_at, updated_at) "
+        f"INSERT INTO universities ({', '.join(cols_list)}, created_at, updated_at) "
         f"VALUES ({ph}, NOW(), NOW()) RETURNING id",
         vals,
     )
-    row = cur.fetchone()
-    return int(row[0])
+    return int(cur.fetchone()[0])
 
 
 def _source_id_from_notes(notes: str | None, source: str) -> str | None:
-    """Extract e.g. daad_course_id=12345 or studyinnl_id=abc from a notes string."""
     if not notes:
         return None
     patterns = [
@@ -156,7 +171,8 @@ def _source_id_from_notes(notes: str | None, source: str) -> str | None:
     for pat in patterns:
         m = re.search(pat, notes)
         if m:
-            return m.group(1)
+            # strip trailing semicolons/whitespace that sneak in
+            return m.group(1).rstrip(";, \t")
     return None
 
 
@@ -166,12 +182,11 @@ def _upsert_course(
     university_id: int,
     source: str,
 ) -> int:
-    """Fuzzy-match or insert course.  Returns course id."""
     name = payload.get("name") or "Unknown"
     degree_level = (payload.get("degree_level") or "MASTER").upper()
     notes = payload.get("notes") or ""
 
-    # 1) Exact match by source id in notes
+    # 1) Exact match by source id in notes field
     src_id = _source_id_from_notes(notes, source)
     if src_id:
         cur.execute(
@@ -180,72 +195,99 @@ def _upsert_course(
         )
         row = cur.fetchone()
         if row:
-            existing = dict(zip([d[0] for d in cur.description], row))
+            cols = [d[0] for d in cur.description]
+            existing = dict(zip(cols, row))
             cid = int(existing["id"])
-            patch = _wise_patch(existing, {**payload, "university_id": university_id})
+            merged = {**payload, "university_id": university_id}
+            patch = _clean_payload(_wise_patch(existing, merged), _INSERT_SKIP)
             if patch:
                 keys = list(patch.keys())
                 vals = [patch[k] for k in keys]
                 set_sql = ", ".join(f"{k} = %s" for k in keys) + ", updated_at = NOW()"
-                cur.execute(
-                    f"UPDATE courses SET {set_sql} WHERE id = %s",
-                    (*vals, cid),
-                )
+                cur.execute(f"UPDATE courses SET {set_sql} WHERE id = %s", (*vals, cid))
             return cid
 
-    # 2) Fuzzy match by name
+    # 2) Fuzzy match by name within the same university
     cur.execute(
         """
         SELECT id, name, degree_level, university_id, notes
         FROM courses
-        WHERE degree_level = %s AND university_id = %s
-          AND name ILIKE %s
+        WHERE degree_level = %s AND university_id = %s AND name ILIKE %s
         ORDER BY id DESC LIMIT 40
         """,
         (degree_level, university_id, f"%{name[:50]}%"),
     )
-    candidates = [dict(zip([d[0] for d in cur.description], row)) for row in cur.fetchall()]
+    cols = [d[0] for d in cur.description]
+    candidates = [dict(zip(cols, row)) for row in cur.fetchall()]
     best = _fuzzy_best(name, candidates, key="name", min_score=92)
 
     if best:
         cid = int(best["id"])
-        patch = _wise_patch(best, {**payload, "university_id": university_id})
+        merged = {**payload, "university_id": university_id}
+        patch = _clean_payload(_wise_patch(best, merged), _INSERT_SKIP)
         if patch:
             keys = list(patch.keys())
             vals = [patch[k] for k in keys]
             set_sql = ", ".join(f"{k} = %s" for k in keys) + ", updated_at = NOW()"
-            cur.execute(
-                f"UPDATE courses SET {set_sql} WHERE id = %s",
-                (*vals, cid),
-            )
+            cur.execute(f"UPDATE courses SET {set_sql} WHERE id = %s", (*vals, cid))
         return cid
 
-    # 3) Insert
-    full_payload = {**payload, "university_id": university_id}
-    clean = {k: v for k, v in full_payload.items() if k not in _SKIP_COLS and v is not None}
-    cols = list(clean.keys())
-    vals = [clean[k] for k in cols]
+    # 3) Insert new course — university_id is included explicitly here
+    full = {**payload, "university_id": university_id}
+    clean = _clean_payload(full, _INSERT_SKIP)
+    cols_list = list(clean.keys())
+    vals = [clean[k] for k in cols_list]
     ph = ", ".join(["%s"] * len(vals))
     cur.execute(
-        f"INSERT INTO courses ({', '.join(cols)}, created_at, updated_at) "
+        f"INSERT INTO courses ({', '.join(cols_list)}, created_at, updated_at) "
         f"VALUES ({ph}, NOW(), NOW()) RETURNING id",
         vals,
     )
-    row = cur.fetchone()
-    return int(row[0])
+    return int(cur.fetchone()[0])
+
+
+def _mark_status(
+    cur: psycopg.Cursor,
+    row_id: int,
+    status: str,
+    course_id: int | None = None,
+    error: str | None = None,
+    missing_fields: list[str] | None = None,
+) -> None:
+    cur.execute(
+        """
+        UPDATE raw_crawl_items
+        SET parse_status   = %s,
+            parse_error    = %s,
+            missing_fields = %s,
+            course_id      = %s,
+            parsed_at      = NOW()
+        WHERE id = %s
+        """,
+        (
+            status,
+            error,
+            json.dumps(missing_fields) if missing_fields else None,
+            course_id,
+            row_id,
+        ),
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Job
 # ─────────────────────────────────────────────────────────────────────────────
 
-# Fields whose absence causes us to flag needs_llm.
-# Deadline fields are handled by the existing `deadlines` job, so we don't
-# escalate to LLM just for missing dates.
+# Fields that trigger LLM escalation when missing.
+# Deadline fields are included here: the existing rules-based deadlines job
+# handles deadline_notes → structured dates, but many rows have no parseable
+# notes at all — so we ask the LLM to fill them directly from the raw payload.
 _LLM_ESCALATION_FIELDS = frozenset({
     "teaching_language",
     "field",
     "duration_months",
+    "deadline_fall",
+    "deadline_spring",
 })
 
 
@@ -255,163 +297,114 @@ class ParseRawJob:
     def __init__(self, cfg: AppConfig) -> None:
         self.cfg = cfg
 
-    def _select_batch(
-        self,
-        cur: psycopg.Cursor,
-        batch_size: int,
-        lock: bool,
-    ) -> list[tuple[int, str, str, dict]]:
-        """
-        Fetch a batch of pending raw_crawl_items.
-        Returns list of (id, source, source_id, raw_data).
-        """
-        lock_clause = "FOR UPDATE SKIP LOCKED" if lock else ""
-        cur.execute(
-            f"""
-            SELECT id, source, source_id, raw_data
-            FROM raw_crawl_items
-            WHERE parse_status = 'pending'
-            ORDER BY id
-            LIMIT %s
-            {lock_clause}
-            """,
-            (batch_size,),
-        )
-        rows = cur.fetchall()
-        result = []
-        for row in rows:
-            rid, source, source_id, raw_data = row
-            if isinstance(raw_data, str):
-                raw_data = json.loads(raw_data)
-            result.append((rid, source, source_id, raw_data))
-        return result
-
-    def _mark_status(
-        self,
-        cur: psycopg.Cursor,
-        row_id: int,
-        status: str,
-        course_id: int | None = None,
-        error: str | None = None,
-        missing_fields: list[str] | None = None,
-    ) -> None:
-        cur.execute(
-            """
-            UPDATE raw_crawl_items
-            SET parse_status   = %s,
-                parse_error    = %s,
-                missing_fields = %s,
-                course_id      = %s,
-                parsed_at      = NOW()
-            WHERE id = %s
-            """,
-            (
-                status,
-                error,
-                json.dumps(missing_fields) if missing_fields else None,
-                course_id,
-                row_id,
-            ),
-        )
+    def _next_row(self, conn: psycopg.Connection) -> tuple | None:
+        """Fetch and lock one pending/failed row. Returns None when queue empty."""
+        lock_clause = "FOR UPDATE SKIP LOCKED" if self.cfg.lock_rows else ""
+        with conn.cursor() as cur:
+            cur.execute(
+                f"""
+                SELECT id, source, source_id, raw_data
+                FROM raw_crawl_items
+                WHERE parse_status IN ('pending', 'failed')
+                ORDER BY id
+                LIMIT 1
+                {lock_clause}
+                """,
+            )
+            row = cur.fetchone()
+        if not row:
+            return None
+        rid, source, source_id, raw_data = row
+        if isinstance(raw_data, str):
+            raw_data = json.loads(raw_data)
+        return rid, source, source_id, raw_data
 
     def run(self, conn: psycopg.Connection, args: JobArgs) -> int:
         processed = 0
-        updated = 0
+        promoted = 0
 
         while processed < args.max_rows:
-            # Fetch a batch inside its own transaction
-            with conn.transaction():
-                with conn.cursor() as cur:
-                    batch = self._select_batch(
-                        cur, min(args.batch_size, args.max_rows - processed),
-                        lock=self.cfg.lock_rows,
-                    )
+            # Each row is its own transaction so failures are fully isolated.
+            try:
+                with conn.transaction():
+                    row = self._next_row(conn)
+                    if row is None:
+                        break
 
-                if not batch:
-                    break
-
-                for row_id, source, source_id, raw_data in batch:
+                    row_id, source, source_id, raw_data = row
                     processed += 1
+
+                    # --- Transform ---
                     try:
                         transformer = get_transformer(source)
-                    except KeyError as e:
-                        with conn.cursor() as cur:
-                            self._mark_status(
-                                cur, row_id, "failed",
-                                error=f"No transformer for source '{source}'",
-                            )
-                        log.warning("[id=%s source=%s] %s", row_id, source, e)
-                        continue
-
-                    try:
                         parsed: ParsedItem = transformer.transform(raw_data)
-                    except Exception as e:
-                        with conn.cursor() as cur:
-                            self._mark_status(
-                                cur, row_id, "failed",
-                                error=f"Transformer error: {e}",
-                            )
-                        log.exception(
-                            "[id=%s source=%s source_id=%s] Transformer raised",
-                            row_id, source, source_id,
+                    except KeyError:
+                        _mark_status(
+                            conn.cursor().__enter__(),  # won't work inside ctx mgr
+                            row_id, "failed",
+                            error=f"No transformer for source '{source}'",
                         )
-                        continue
+                        raise  # let the transaction commit the mark
 
                     if args.dry_run:
                         log.info(
                             "[DRY id=%s source=%s] missing=%s warnings=%s",
                             row_id, source, parsed.missing_fields, parsed.warnings,
                         )
-                        continue
+                        # Roll back by raising — dry run leaves row as-is
+                        raise _DryRunRollback()
 
-                    # Determine target status
-                    # Deadline fields are handled by the existing deadlines job,
-                    # so filter them out before deciding LLM escalation.
                     llm_missing = [
                         f for f in parsed.missing_fields
                         if f in _LLM_ESCALATION_FIELDS
                     ]
                     target_status = "needs_llm" if llm_missing else "parsed"
 
-                    try:
-                        with conn.transaction():
-                            with conn.cursor() as cur:
-                                uni_id = _upsert_university(
-                                    cur, parsed.university_payload
-                                )
-                                course_id = _upsert_course(
-                                    cur, parsed.course_payload, uni_id, source
-                                )
-                                self._mark_status(
-                                    cur,
-                                    row_id,
-                                    target_status,
-                                    course_id=course_id,
-                                    missing_fields=parsed.missing_fields or None,
-                                    error="; ".join(parsed.warnings) if parsed.warnings else None,
-                                )
-
-                        log.info(
-                            "[id=%s source=%s] → %s (course_id=%s missing=%s)",
-                            row_id, source, target_status,
-                            course_id, parsed.missing_fields,
+                    with conn.cursor() as cur:
+                        uni_id = _upsert_university(cur, parsed.university_payload)
+                        course_id = _upsert_course(cur, parsed.course_payload, uni_id, source)
+                        _mark_status(
+                            cur,
+                            row_id,
+                            target_status,
+                            course_id=course_id,
+                            missing_fields=parsed.missing_fields or None,
+                            error="; ".join(parsed.warnings) if parsed.warnings else None,
                         )
-                        updated += 1
 
-                    except Exception as e:
+                    log.info(
+                        "[id=%s source=%s] → %s (course_id=%s missing=%s)",
+                        row_id, source, target_status, course_id, parsed.missing_fields,
+                    )
+                    promoted += 1
+
+            except _DryRunRollback:
+                # Expected — just counting
+                pass
+            except Exception as e:
+                # Transaction was rolled back by psycopg3 on exception exit.
+                # Write failure status in a fresh transaction.
+                log.exception(
+                    "[id=%s source=%s source_id=%s] upsert failed: %s",
+                    row_id if "row_id" in dir() else "?",
+                    source if "source" in dir() else "?",
+                    source_id if "source_id" in dir() else "?",
+                    e,
+                )
+                try:
+                    with conn.transaction():
                         with conn.cursor() as cur:
-                            self._mark_status(
-                                cur, row_id, "failed",
-                                error=f"DB upsert error: {e}",
-                            )
-                        log.exception(
-                            "[id=%s source=%s source_id=%s] DB upsert failed",
-                            row_id, source, source_id,
-                        )
+                            _mark_status(cur, row_id, "failed", error=str(e)[:500])
+                except Exception:
+                    pass  # best-effort
 
         if args.dry_run:
             log.info("Dry-run complete. processed=%s", processed)
         else:
-            log.info("Job complete. processed=%s promoted=%s", processed, updated)
+            log.info("Job complete. processed=%s promoted=%s", processed, promoted)
 
-        return updated
+        return promoted
+
+
+class _DryRunRollback(Exception):
+    """Sentinel used to roll back a dry-run transaction cleanly."""

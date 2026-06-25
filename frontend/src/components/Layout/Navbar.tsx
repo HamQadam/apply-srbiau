@@ -26,8 +26,12 @@ export function Navbar() {
             { to: '/dashboard', label: t('nav.dashboard') },
             { to: '/explore', label: t('nav.explore') },
             { to: '/recommendations', label: t('nav.recommendations') },
+            { to: '/experiences', label: t('nav.experiences', 'Experiences') },
           ]
-        : [{ to: '/explore', label: t('nav.browse') }],
+        : [
+            { to: '/explore', label: t('nav.browse') },
+            { to: '/experiences', label: t('nav.experiences', 'Experiences') },
+          ],
     [isAuthenticated, t]
   );
 
@@ -45,7 +49,7 @@ export function Navbar() {
           {/* Logo & Brand */}
           <div className="flex items-center">
             <Link to="/" className="flex items-center gap-2">
-              <span className="text-2xl">🎓</span>
+              <span className="text-2xl" aria-hidden="true">🎓</span>
               <span className="font-display font-bold text-xl text-text-primary">Ghadam</span>
             </Link>
           </div>
@@ -58,11 +62,12 @@ export function Navbar() {
                 to={link.to}
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.98 }}
+                aria-current={isActive(link.to) ? 'page' : undefined}
                 className={cn(
-                  'px-3 py-2 text-sm font-medium transition-colors',
+                  'px-3 py-2 text-sm font-medium transition-colors pb-[6px]',
                   isActive(link.to)
-                    ? 'text-brand-primary'
-                    : 'text-text-secondary hover:text-text-primary'
+                    ? 'text-brand-primary border-b-2 border-brand-primary'
+                    : 'text-text-secondary hover:text-text-primary border-b-2 border-transparent'
                 )}
               >
                 {link.label}
@@ -142,6 +147,16 @@ export function Navbar() {
                       <p className="text-xs text-text-muted">{user?.phone}</p>
                     </div>
                     <div className="py-1">
+                      {user?.is_admin && (
+                        <MotionLink
+                          to="/admin/experiences"
+                          whileHover={{ scale: 1.01 }}
+                          whileTap={{ scale: 0.97 }}
+                          className="block px-4 py-2 text-sm text-text-secondary hover:bg-elevated"
+                        >
+                          {t('nav.adminExperiences', 'Experience review')}
+                        </MotionLink>
+                      )}
                       <MotionLink
                         to="/settings"
                         whileHover={{ scale: 1.01 }}
@@ -167,7 +182,7 @@ export function Navbar() {
                 to="/login"
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.97 }}
-                className="hidden md:inline-flex px-4 py-2 bg-brand-primary text-white text-sm font-medium rounded-lg hover:bg-brand-secondary transition-colors"
+                className="hidden md:inline-flex px-4 py-2 bg-brand-primary text-white text-sm font-medium rounded-lg hover:bg-brand-primary/90 transition-colors"
               >
                 {t('nav.signIn')}
               </MotionLink>
@@ -234,8 +249,9 @@ export function Navbar() {
                     onClick={() => setIsMenuOpen(false)}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.97 }}
+                    aria-current={isActive(link.to) ? 'page' : undefined}
                     className={cn(
-                      'rounded-xl px-4 py-3 text-sm font-medium transition-colors border border-transparent',
+                      'rounded-lg px-4 py-3 text-sm font-medium transition-colors border border-transparent',
                       isActive(link.to)
                         ? 'bg-brand-primary/10 text-brand-primary border-brand-primary/30'
                         : 'text-text-secondary hover:text-text-primary hover:bg-elevated'

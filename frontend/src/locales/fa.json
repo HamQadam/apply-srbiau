@@ -614,5 +614,30 @@
       "speaking": "Speaking",
       "listening": "Listening"
     }
+  },
+  "experiences": {
+    "title": "تجربه‌های پذیرش",
+    "subtitle": "داستان‌های تأییدشده متقاضیان مرتبط با دانشگاه‌ها و برنامه‌ها.",
+    "shareLink": "تجربه‌ات را به اشتراک بگذار",
+    "filters": {
+      "searchPlaceholder": "جستجوی برنامه",
+      "countryPlaceholder": "کشور",
+      "allOutcomes": "همه نتایج",
+      "scholarshipLabel": "بورسیه"
+    },
+    "status": {
+      "accepted": "پذیرفته شده",
+      "rejected": "رد شده",
+      "waitlisted": "لیست انتظار",
+      "withdrawn": "انصراف داده"
+    },
+    "card": {
+      "customUniversity": "دانشگاه سفارشی",
+      "sharedOn": "به اشتراک گذاشته شده در {{date}}",
+      "scholarshipReceived": "بورسیه دریافت شده",
+      "fullProfile": "پروفایل کامل · {{price}} سکه"
+    },
+    "empty": "هنوز تجربه‌ای با این فیلترها تأیید نشده است.",
+    "loadError": "بارگذاری تجربه‌ها ناموفق بود"
   }
 }

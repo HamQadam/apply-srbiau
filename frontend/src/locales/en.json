@@ -614,5 +614,30 @@
       "speaking": "Speaking",
       "listening": "Listening"
     }
+  },
+  "experiences": {
+    "title": "Application Experiences",
+    "subtitle": "Moderated applicant stories linked to universities and programmes.",
+    "shareLink": "Share Your Experience",
+    "filters": {
+      "searchPlaceholder": "Search programme",
+      "countryPlaceholder": "Country",
+      "allOutcomes": "All outcomes",
+      "scholarshipLabel": "Scholarship"
+    },
+    "status": {
+      "accepted": "Accepted",
+      "rejected": "Rejected",
+      "waitlisted": "Waitlisted",
+      "withdrawn": "Withdrawn"
+    },
+    "card": {
+      "customUniversity": "Custom university",
+      "sharedOn": "Shared {{date}}",
+      "scholarshipReceived": "Scholarship received",
+      "fullProfile": "Full profile · {{price}} coins"
+    },
+    "empty": "No approved experiences match these filters yet.",
+    "loadError": "Could not load experiences"
   }
 }

@@ -24,6 +24,10 @@ import type {
   ChecklistItem,
   NoteEntry,
   CourseLanguageRequirement,
+  PublicExperience,
+  ExperienceRecord,
+  ExperienceSubmission,
+  ExperienceModerationStatus,
 } from '../types';
 
 // Auth
@@ -167,6 +171,9 @@ export const universityApi = {
   get: (id: number) => api.get<University>(`/universities/${id}`),
   
   getCountries: () => api.get<Array<{ country: string; count: number }>>('/universities/countries'),
+
+  create: (data: { name: string; country: string; city: string }) =>
+    api.post<University>('/universities', data),
   
   getCourses: (id: number) => api.get<Course[]>(`/universities/${id}/courses`),
 };
@@ -219,6 +226,50 @@ export const courseApi = {
     rejected: number;
     acceptance_rate: number | null;
   }>(`/courses/${id}/stats`),
+};
+
+// Experiences
+export const experiencesApi = {
+  browse: (params?: {
+    query?: string;
+    country?: string;
+    university_id?: number;
+    course_id?: number;
+    degree_level?: string;
+    status?: string;
+    scholarship_received?: boolean;
+    skip?: number;
+    limit?: number;
+  }) => {
+    const searchParams = new URLSearchParams();
+    if (params?.query) searchParams.set('query', params.query);
+    if (params?.country) searchParams.set('country', params.country);
+    if (params?.university_id) searchParams.set('university_id', String(params.university_id));
+    if (params?.course_id) searchParams.set('course_id', String(params.course_id));
+    if (params?.degree_level) searchParams.set('degree_level', params.degree_level);
+    if (params?.status) searchParams.set('status', params.status);
+    if (params?.scholarship_received !== undefined) searchParams.set('scholarship_received', String(params.scholarship_received));
+    if (params?.skip) searchParams.set('skip', String(params.skip));
+    if (params?.limit) searchParams.set('limit', String(params.limit));
+    const query = searchParams.toString();
+    return api.get<PublicExperience[]>(`/experiences${query ? `?${query}` : ''}`);
+  },
+
+  get: (id: number) => api.get<PublicExperience>(`/experiences/${id}`),
+
+  getMine: () => api.get<ExperienceRecord[]>('/experiences/my'),
+
+  submit: (data: ExperienceSubmission) =>
+    api.post<ExperienceRecord>('/experiences', data),
+
+  submitFromTracker: (programId: number, data: ExperienceSubmission) =>
+    api.post<ExperienceRecord>(`/experiences/from-tracker/${programId}`, data),
+
+  getReviewQueue: (status: ExperienceModerationStatus = 'submitted') =>
+    api.get<ExperienceRecord[]>(`/experiences/admin/review?moderation_status=${status}`),
+
+  moderate: (id: number, data: { moderation_status: ExperienceModerationStatus; moderation_notes?: string }) =>
+    api.patch<ExperienceRecord>(`/experiences/admin/${id}`, data),
 };
 
 // Ghadam

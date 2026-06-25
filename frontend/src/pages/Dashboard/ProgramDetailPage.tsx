@@ -820,13 +820,12 @@ export function ProgramDetailPage() {
                 {t('programDetail.share.subtitle')}
               </p>
               <div className="mt-4 flex items-center gap-4">
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.97 }}
+                <Link
+                  to={`/experiences/share/${program.id}`}
                   className="px-4 py-2 bg-gradient-to-r from-status-warning to-brand-accent text-white font-medium rounded-xl hover:from-brand-accent hover:to-status-warning transition-all shadow-sm"
                 >
                   {t('programDetail.share.cta')}
-                </motion.button>
+                </Link>
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.97 }}

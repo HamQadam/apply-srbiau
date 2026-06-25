@@ -62,10 +62,9 @@ _FIELD_DESCRIPTIONS: dict[str, str] = {
 
 _SYSTEM_PROMPT = (
     "You are a data extraction assistant. "
-    "Given a raw JSON record of an academic program, extract the requested fields. "
-    "Return ONLY a valid JSON object with the requested keys. "
-    "Use null for any field you cannot determine. "
-    "Do not include any explanation or markdown — just the JSON object."
+    "Extract fields from an academic program record. "
+    "Reply with ONLY a single JSON object. No markdown, no code fences, no explanation. "
+    "Use null for unknown values. Keep string values short."
 )
 
 
@@ -189,14 +188,19 @@ def _patch_course(
     cur: psycopg.Cursor,
     course_id: int,
     extracted: dict[str, Any],
-) -> int:
+) -> list[str]:
     """
     Apply extracted values to the course row using COALESCE so we never
-    overwrite existing data.  Returns the number of fields actually patched.
+    overwrite existing data.
+
+    Also appends the patched field names to llm_filled_fields (a JSONB array)
+    so the frontend can flag them as "filled by AI — please verify".
+
+    Returns the list of field names that were actually patched.
     """
-    # Build per-field COALESCE update
     set_parts: list[str] = []
     vals: list[Any] = []
+    patched_fields: list[str] = []
 
     for field_name, value in extracted.items():
         if value is None:
@@ -214,17 +218,30 @@ def _patch_course(
 
         set_parts.append(f"{field_name} = COALESCE({field_name}, %s)")
         vals.append(actual_value)
+        patched_fields.append(field_name)
 
     if not set_parts:
-        return 0
+        return []
 
-    vals.append(course_id)
-    set_sql = ", ".join(set_parts) + ", updated_at = NOW()"
-    cur.execute(
-        f"UPDATE courses SET {set_sql} WHERE id = %s",
-        vals,
+    # Merge patched_fields into the existing llm_filled_fields array.
+    # jsonb_build_array() + || operator appends without duplicates via a subquery.
+    new_fields_json = json.dumps(patched_fields)
+    set_sql = (
+        ", ".join(set_parts)
+        + ", llm_filled_fields = ("
+        "  SELECT jsonb_agg(DISTINCT x) FROM ("
+        "    SELECT jsonb_array_elements_text("
+        "      COALESCE(llm_filled_fields, '[]'::jsonb) || %s::jsonb"
+        "    ) AS x"
+        "  ) sub"
+        ")"
+        + ", updated_at = NOW()"
     )
-    return len(set_parts)
+    vals.append(new_fields_json)
+    vals.append(course_id)
+
+    cur.execute(f"UPDATE courses SET {set_sql} WHERE id = %s", vals)
+    return patched_fields
 
 
 def _mark_done(
@@ -384,18 +401,21 @@ class LLMEnrichJob:
                             )
                             continue
 
-                        # Patch the course row
-                        patched = _patch_course(cur, course_id, extracted)
+                        # Patch the course row and record which fields the LLM filled
+                        patched_fields = _patch_course(cur, course_id, extracted)
 
                         _mark_done(
                             cur, raw_item_id,
-                            error=f"llm extracted {patched} field(s): {list(extracted.keys())}",
+                            error=(
+                                f"llm filled {len(patched_fields)} field(s): {patched_fields}"
+                                if patched_fields else "llm returned values but none applied (COALESCE)"
+                            ),
                         )
 
                         log.info(
                             "[id=%s source=%s course_id=%s] LLM patched %d field(s): %s",
                             raw_item_id, source, course_id,
-                            patched, list(extracted.keys()),
+                            len(patched_fields), patched_fields,
                         )
                         enriched += 1
 

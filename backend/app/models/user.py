@@ -77,6 +77,7 @@ class UserBase(SQLModel):
     email_notifications: bool = Field(default=True)
     deadline_reminders: bool = Field(default=True)
     is_active: bool = Field(default=True)  # Account status
+    is_admin: bool = Field(default=False)
 
 
 class User(UserBase, table=True):
@@ -117,6 +118,7 @@ class UserUpdate(SQLModel):
     goal: Optional[UserGoal] = None
     email_notifications: Optional[bool] = None
     deadline_reminders: Optional[bool] = None
+    is_admin: Optional[bool] = None
 
 
 class UserOnboarding(SQLModel):

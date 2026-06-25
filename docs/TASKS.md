@@ -73,16 +73,16 @@ This file turns the proposal into concrete engineering work. Keep it updated as 
 
 ## Phase 6: Experience Sharing
 
-- [ ] Define public experience schema.
-- [ ] Decide visibility rules: private, anonymized, public.
-- [ ] Build experience submission flow for applicants after results.
-- [ ] Link experiences to university and course where possible.
-- [ ] Support custom university/course where no catalogue match exists.
-- [ ] Add moderation status: draft, submitted, approved, rejected, hidden.
-- [ ] Add admin review page.
-- [ ] Add PII warning before publish.
-- [ ] Add public experience browsing and filtering.
-- [ ] Add full-profile unlock rules if using Ghadam coins.
+- [X] Define public experience schema.
+- [X] Decide visibility rules: private, anonymized, public.
+- [X] Build experience submission flow for applicants after results.
+- [X] Link experiences to university and course where possible.
+- [X] Support custom university/course where no catalogue match exists.
+- [X] Add moderation status: draft, submitted, approved, rejected, hidden.
+- [X] Add admin review page.
+- [X] Add PII warning before publish.
+- [X] Add public experience browsing and filtering.
+- [X] Add full-profile unlock rules if using Ghadam coins.
 
 ## Phase 7: Country Expansion
 

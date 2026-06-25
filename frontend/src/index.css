@@ -13,9 +13,9 @@
     --text-secondary: 55 65 81;
     --text-muted: 107 114 128;
     --border: 226 232 240;
-    --brand-primary: 37 99 235;
-    --brand-secondary: 99 102 241;
-    --brand-accent: 16 185 129;
+    --brand-primary: 13 115 119;
+    --brand-secondary: 14 165 115;
+    --brand-accent: 14 165 115;
     --status-success: 16 185 129;
     --status-warning: 245 158 11;
     --status-danger: 239 68 68;
@@ -38,8 +38,8 @@
     --text-secondary: 148 163 184;
     --text-muted: 100 116 139;
     --border: 30 41 59;
-    --brand-primary: 96 165 250;
-    --brand-secondary: 129 140 248;
+    --brand-primary: 20 168 174;
+    --brand-secondary: 52 211 153;
     --brand-accent: 52 211 153;
     --status-success: 52 211 153;
     --status-warning: 251 191 36;

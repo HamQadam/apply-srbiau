@@ -18,6 +18,7 @@ from .activities import router as activities_router
 from .activities import search_router as activities_search_router
 from .subscriptions import router as subscriptions_router
 from .wallet import router as wallet_router
+from .experiences import router as experiences_router
 
 router = APIRouter(prefix="/api/v1")
 
@@ -38,3 +39,4 @@ router.include_router(activities_router)
 router.include_router(activities_search_router)
 router.include_router(subscriptions_router)
 router.include_router(wallet_router)
+router.include_router(experiences_router)

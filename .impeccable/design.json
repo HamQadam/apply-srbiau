@@ -1,0 +1,261 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-06-26T00:00:00.000Z",
+  "title": "Design System: Ghadam",
+  "extensions": {
+    "colorMeta": {
+      "persian-teal": {
+        "role": "primary",
+        "displayName": "Persian Teal",
+        "canonical": "oklch(49% 0.11 196)",
+        "tonalRamp": ["#031e20", "#052e30", "#094446", "#0d6468", "#0d7377", "#14a8ae", "#2dcfd6", "#a8edee"]
+      },
+      "persian-teal-deep": {
+        "role": "primary-deep",
+        "displayName": "Persian Teal Deep",
+        "canonical": "oklch(43% 0.10 196)",
+        "tonalRamp": ["#031e20", "#052e30", "#094446", "#095f62", "#0d7377", "#14a8ae", "#2dcfd6", "#a8edee"]
+      },
+      "persian-teal-light": {
+        "role": "primary-light",
+        "displayName": "Persian Teal Light",
+        "canonical": "oklch(57% 0.13 196)",
+        "tonalRamp": ["#031e20", "#052e30", "#094446", "#0d7377", "#14a8ae", "#38c9d0", "#7de0e4", "#c8f4f5"]
+      },
+      "emerald-guide": {
+        "role": "secondary",
+        "displayName": "Emerald Guide",
+        "canonical": "oklch(60% 0.15 157)",
+        "tonalRamp": ["#021e13", "#043d28", "#07653f", "#0b8a5e", "#0ea573", "#25c98e", "#5ddba8", "#b6f0d8"]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "oklch(17% 0.01 246)",
+        "tonalRamp": ["#020406", "#090d14", "#111827", "#1f2937", "#374151", "#6b7280", "#9ca3af", "#f3f4f6"]
+      },
+      "surface-bg": {
+        "role": "neutral-bg",
+        "displayName": "Cool Canvas",
+        "canonical": "oklch(97% 0.008 230)",
+        "tonalRamp": ["#c8d0dc", "#d5dce6", "#dfe6f0", "#e8eef5", "#eff3f8", "#f5f7fa", "#fafbfd", "#ffffff"]
+      },
+      "border-default": {
+        "role": "neutral-border",
+        "displayName": "Cool Border",
+        "canonical": "oklch(90% 0.012 230)",
+        "tonalRamp": ["#94a3b8", "#a8b8c8", "#bfcbd8", "#d2dce6", "#e2e8f0", "#edf2f7", "#f4f7fb", "#ffffff"]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Hero headings, page titles on full-bleed sections. Space Grotesk. Ceiling 3.5rem."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Section headings, card headers, modal titles. Space Grotesk."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "List item labels, sidebar headings, form section titles. Manrope."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "All prose, descriptions, help copy. Manrope (EN) / Vazir (FA). Max 65–75ch."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Tags, badges, status chips, metadata pairs. Manrope. Not uppercase."
+      }
+    },
+    "shadows": [
+      {
+        "name": "hover-lift",
+        "value": "0 4px 16px rgba(13, 115, 119, 0.10)",
+        "purpose": "Applied on hover to interactive cards. Teal tint makes the lift feel branded."
+      },
+      {
+        "name": "modal-ambient",
+        "value": "0 8px 32px rgba(2, 6, 23, 0.18)",
+        "purpose": "Dialog and drawer overlay. The one shadow that appears at rest (dialogs are above the layer stack)."
+      },
+      {
+        "name": "dropdown-lift",
+        "value": "0 4px 12px rgba(2, 6, 23, 0.12)",
+        "purpose": "Position-fixed dropdowns and comboboxes. Small, directional."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out-quart",
+        "value": "cubic-bezier(0.25, 1, 0.5, 1)",
+        "purpose": "Default easing for all state transitions. Exit animations use ease-in-quart reversed."
+      },
+      {
+        "name": "duration-fast",
+        "value": "120ms",
+        "purpose": "Hover state changes, focus rings, button press."
+      },
+      {
+        "name": "duration-standard",
+        "value": "220ms",
+        "purpose": "Card hover lift, dropdown open/close, panel transitions."
+      },
+      {
+        "name": "duration-slow",
+        "value": "380ms",
+        "purpose": "Page transitions, modal entrance, staggered list reveals."
+      }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" },
+      { "name": "2xl", "value": "1536px" }
+    ],
+    "zIndex": {
+      "dropdown": 10,
+      "sticky": 50,
+      "modal-backdrop": 80,
+      "modal": 90,
+      "toast": 100,
+      "tooltip": 110
+    }
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The main action call. Used for form submits, primary CTAs, confirm dialogs.",
+      "html": "<button class=\"ds-btn-primary\">ادامه</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: #0d7377; color: #f8fafc; padding: 10px 20px; border-radius: 8px; border: none; font-family: 'Manrope', ui-sans-serif, system-ui, sans-serif; font-size: 1rem; font-weight: 500; line-height: 1.4; cursor: pointer; transition: background 120ms cubic-bezier(0.25, 1, 0.5, 1), transform 120ms cubic-bezier(0.25, 1, 0.5, 1); text-decoration: none; } .ds-btn-primary:hover { background: #095f62; transform: translateY(-1px); } .ds-btn-primary:focus-visible { outline: 2px solid #0d7377; outline-offset: 2px; } .ds-btn-primary:active { transform: translateY(0); } .ds-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Secondary action. Used alongside Primary when two options are needed.",
+      "html": "<button class=\"ds-btn-ghost\">بازگشت</button>",
+      "css": ".ds-btn-ghost { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: transparent; color: #0d7377; padding: 10px 20px; border-radius: 8px; border: 1px solid #0d7377; font-family: 'Manrope', ui-sans-serif, system-ui, sans-serif; font-size: 1rem; font-weight: 500; line-height: 1.4; cursor: pointer; transition: background 120ms cubic-bezier(0.25, 1, 0.5, 1); text-decoration: none; } .ds-btn-ghost:hover { background: #f8fafc; } .ds-btn-ghost:focus-visible { outline: 2px solid #0d7377; outline-offset: 2px; } .ds-btn-ghost:disabled { opacity: 0.5; cursor: not-allowed; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input-default",
+      "description": "Standard single-line text input. Used in forms, search, and filter fields.",
+      "html": "<div class=\"ds-input-wrapper\"><input class=\"ds-input\" type=\"text\" placeholder=\"نام برنامه را جستجو کنید\" /></div>",
+      "css": ".ds-input-wrapper { position: relative; display: block; } .ds-input { display: block; width: 100%; background: #ffffff; color: #111827; padding: 10px 14px; border-radius: 8px; border: 1px solid #e2e8f0; font-family: 'Manrope', ui-sans-serif, system-ui, sans-serif; font-size: 1rem; font-weight: 400; line-height: 1.4; transition: border-color 120ms cubic-bezier(0.25, 1, 0.5, 1); outline: none; box-sizing: border-box; } .ds-input::placeholder { color: #6b7280; } .ds-input:focus { border-color: #0d7377; box-shadow: 0 0 0 2px rgba(13, 115, 119, 0.15); } .ds-input:disabled { opacity: 0.5; cursor: not-allowed; background: #f8fafc; }"
+    },
+    {
+      "name": "Filter Chip (default)",
+      "kind": "chip",
+      "refersTo": "chip-default",
+      "description": "Inactive filter pill in Explore and Recommendations filter panels.",
+      "html": "<button class=\"ds-chip\">آلمان</button>",
+      "css": ".ds-chip { display: inline-flex; align-items: center; background: #f8fafc; color: #374151; padding: 4px 12px; border-radius: 9999px; border: 1px solid #e2e8f0; font-family: 'Manrope', ui-sans-serif, system-ui, sans-serif; font-size: 0.75rem; font-weight: 500; line-height: 1.4; cursor: pointer; transition: background 120ms cubic-bezier(0.25, 1, 0.5, 1), color 120ms, border-color 120ms; } .ds-chip:hover { background: #eff3f8; } .ds-chip:focus-visible { outline: 2px solid #0d7377; outline-offset: 2px; }"
+    },
+    {
+      "name": "Filter Chip (active)",
+      "kind": "chip",
+      "refersTo": "chip-active",
+      "description": "Selected/active state for a filter chip.",
+      "html": "<button class=\"ds-chip-active\">آلمان</button>",
+      "css": ".ds-chip-active { display: inline-flex; align-items: center; background: #0d7377; color: #f8fafc; padding: 4px 12px; border-radius: 9999px; border: none; font-family: 'Manrope', ui-sans-serif, system-ui, sans-serif; font-size: 0.75rem; font-weight: 500; line-height: 1.4; cursor: pointer; transition: background 120ms cubic-bezier(0.25, 1, 0.5, 1); } .ds-chip-active:hover { background: #095f62; } .ds-chip-active:focus-visible { outline: 2px solid #0d7377; outline-offset: 2px; }"
+    },
+    {
+      "name": "Program Card",
+      "kind": "card",
+      "refersTo": "card-default",
+      "description": "Tracker and recommendation card. Carries program name, university, deadline, status badge.",
+      "html": "<div class=\"ds-program-card\"><div class=\"ds-card-header\"><h3 class=\"ds-card-title\">Computer Science MSc</h3><p class=\"ds-card-sub\">TU Delft · هلند</p></div><div class=\"ds-card-meta\"><span class=\"ds-badge ds-badge-warn\">۱۸ روز مانده</span><span class=\"ds-badge ds-badge-status\">در حال بررسی</span></div></div>",
+      "css": ".ds-program-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; transition: box-shadow 220ms cubic-bezier(0.25, 1, 0.5, 1), transform 220ms cubic-bezier(0.25, 1, 0.5, 1); } .ds-program-card:hover { box-shadow: 0 4px 16px rgba(13, 115, 119, 0.10); transform: translateY(-2px); } .ds-card-header { margin-bottom: 12px; } .ds-card-title { font-family: 'Manrope', ui-sans-serif, system-ui, sans-serif; font-size: 1rem; font-weight: 600; color: #111827; line-height: 1.4; margin: 0; } .ds-card-sub { font-family: 'Manrope', ui-sans-serif, system-ui, sans-serif; font-size: 0.875rem; font-weight: 400; color: #6b7280; margin: 4px 0 0 0; } .ds-card-meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; } .ds-badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 500; line-height: 1.4; } .ds-badge-warn { background: rgba(245, 158, 11, 0.1); color: #b45309; } .ds-badge-status { background: #f8fafc; color: #374151; border: 1px solid #e2e8f0; }"
+    },
+    {
+      "name": "Navigation Bar",
+      "kind": "nav",
+      "refersTo": "button-ghost",
+      "description": "Sticky top navigation. Backdrop-blurred, 64px height, Persian Teal active state.",
+      "html": "<nav class=\"ds-navbar\"><div class=\"ds-navbar-inner\"><a class=\"ds-navbar-brand\" href=\"/\">Ghadam</a><div class=\"ds-navbar-links\"><a class=\"ds-nav-link\" href=\"/explore\">کاوش</a><a class=\"ds-nav-link ds-nav-link-active\" href=\"/dashboard\">داشبورد</a><a class=\"ds-nav-link\" href=\"/recommendations\">پیشنهادات</a></div></div></nav>",
+      "css": ".ds-navbar { background: rgba(255,255,255,0.9); backdrop-filter: blur(8px); border-bottom: 1px solid #e2e8f0; position: sticky; top: 0; z-index: 50; } .ds-navbar-inner { max-width: 1280px; margin: 0 auto; padding: 0 24px; height: 64px; display: flex; align-items: center; justify-content: space-between; } .ds-navbar-brand { font-family: 'Space Grotesk', 'Manrope', ui-sans-serif, system-ui, sans-serif; font-size: 1.25rem; font-weight: 700; color: #0d7377; text-decoration: none; } .ds-navbar-links { display: flex; align-items: center; gap: 24px; } .ds-nav-link { font-family: 'Manrope', ui-sans-serif, system-ui, sans-serif; font-size: 1rem; font-weight: 500; color: #374151; text-decoration: none; padding-bottom: 2px; border-bottom: 2px solid transparent; transition: color 120ms, border-color 120ms; } .ds-nav-link:hover { color: #0d7377; } .ds-nav-link-active { color: #0d7377; border-bottom-color: #0d7377; } .ds-nav-link:focus-visible { outline: 2px solid #0d7377; outline-offset: 2px; }"
+    },
+    {
+      "name": "Match Score Badge",
+      "kind": "custom",
+      "refersTo": "chip-active",
+      "description": "Inline score indicator on program cards. Color semantic: green 75+, amber 50–74, neutral below.",
+      "html": "<div class=\"ds-score-badge ds-score-high\">امتیاز ۸۲٪</div>",
+      "css": ".ds-score-badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 9999px; font-family: 'Manrope', ui-sans-serif, system-ui, sans-serif; font-size: 0.75rem; font-weight: 500; line-height: 1.4; } .ds-score-high { background: rgba(14, 165, 115, 0.1); color: #0b8a5e; } .ds-score-mid { background: rgba(245, 158, 11, 0.1); color: #92400e; } .ds-score-low { background: #f8fafc; color: #6b7280; border: 1px solid #e2e8f0; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Trusted Companion",
+    "overview": "Ghadam's visual system is built around a single idea: a knowledgeable friend who has already made this journey. Not an institution, not a government form, not a generic SaaS dashboard — a person who sat where the user sits, understood the anxiety and the hope, and emerged with clarity on the other side. The design serves that persona at every turn: warm but precise, personal without sentiment, structured without bureaucracy.\n\nThe palette is anchored in Persian Teal — a considered blue-green that nods to Iranian tilework and mosaic tradition without being decorative. It reads as authority and trustworthiness while carrying the cultural specificity the product earns. The typography pairs Space Grotesk (structured, geometric, direct) with Manrope (warm, readable, generous) and Vazir (Persian-native, never an afterthought).\n\nThe system explicitly rejects three failure modes: Persian government sites (dense, cluttered, formally hostile), generic Western study-abroad tools (Mastersportal, the DAAD site — blue-heavy, no cultural fingerprint), and generic SaaS cream-card dashboards (over-rounded corners, warm-tinted near-white backgrounds, indistinguishable from any B2B tool).",
+    "keyCharacteristics": [
+      "Culturally specific palette: Persian Teal, not generic corporate blue",
+      "Bidirectional layout as a first-class axis, not a retrofit",
+      "Tonal layering for depth — shadows only on hover/active, never at rest",
+      "Typography pairs geometric structure (Space Grotesk) with warm legibility (Manrope + Vazir)",
+      "Cards with honest corners: 12px, not 24–40px over-rounding",
+      "Status colors that earn their place: urgency for deadlines, calm for progress, never decorative"
+    ],
+    "rules": [
+      {
+        "name": "The No-Warm-Sand Rule",
+        "body": "The background is #f5f7fa — cool-tinted, not warm. Warm near-whites (cream, linen, bone, parchment) are forbidden regardless of what they're called.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Teal Rule",
+        "body": "Persian Teal touches ≤20% of any given screen. Its presence signals action, importance, or identity. When everything is teal, nothing is.",
+        "section": "colors"
+      },
+      {
+        "name": "The Persian-First Rule",
+        "body": "Every layout decision must be validated in RTL before LTR. Use logical CSS properties throughout. Persian is not a variant; it is the first form.",
+        "section": "typography"
+      },
+      {
+        "name": "The Ceiling Rule",
+        "body": "No display heading exceeds 3.5rem (56px). No letter-spacing tighter than -0.02em on display type.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat-At-Rest Rule",
+        "body": "Surfaces carry no shadow at rest. A card that lifts on hover is interactive. If it doesn't lift, remove the shadow entirely.",
+        "section": "elevation"
+      },
+      {
+        "name": "The One Shadow Per Element Rule",
+        "body": "Never pair border: 1px solid with box-shadow blur ≥ 16px on the same element. Pick one signal.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do use Persian Teal (#0d7377) as the sole primary action color.",
+      "Do use logical CSS properties throughout. Physical properties are prohibited in layout files.",
+      "Do validate every layout in RTL before shipping.",
+      "Do use text-wrap: balance on h1–h3 and text-wrap: pretty on body prose.",
+      "Do use tonal layering for depth: Surface Background → Surface White → Surface Elevated.",
+      "Do keep card corners at 12px.",
+      "Do respect prefers-reduced-motion throughout.",
+      "Do add Hover Lift shadow to interactive cards on hover.",
+      "Do use Vazir for Persian text at body and label sizes."
+    ],
+    "donts": [
+      "Don't use warm-tinted near-white backgrounds. The cream/sand/paper band is prohibited.",
+      "Don't make this look like a Persian government site: no dense information dumps, no formal bureaucratic copy.",
+      "Don't make this look like Mastersportal or generic Western study-abroad tools.",
+      "Don't pair border: 1px solid with a box-shadow blur ≥ 16px on the same element.",
+      "Don't use border-radius ≥ 24px on cards, inputs, or panels.",
+      "Don't use gradient text (background-clip: text with a gradient).",
+      "Don't use border-left or border-right ≥ 2px as a colored stripe accent.",
+      "Don't use eyebrow text on every section.",
+      "Don't add numbered section markers (01 / 02 / 03) as default scaffolding.",
+      "Don't use z-index: 999 or 9999.",
+      "Don't render placeholder text below 4.5:1 contrast."
+    ]
+  }
+}

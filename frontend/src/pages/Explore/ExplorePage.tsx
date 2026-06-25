@@ -224,7 +224,7 @@ export function ExplorePage() {
         <div className="mb-6 rounded-xl border border-border bg-surface p-4">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
             <label className="space-y-1.5">
-              <span className="text-xs font-medium text-text-muted">{t('explore.filters.search')}</span>
+              <span className="text-xs font-medium text-text-secondary">{t('explore.filters.search')}</span>
               <input
                 type="text"
                 value={searchInput}
@@ -235,7 +235,7 @@ export function ExplorePage() {
             </label>
 
             <div className="space-y-1.5">
-              <span className="block text-xs font-medium text-text-muted">{t('explore.filters.country')}</span>
+              <span className="block text-xs font-medium text-text-secondary">{t('explore.filters.country')}</span>
               <MultiSelectCombobox
                 options={countryOptions}
                 selected={selectedCountries}
@@ -247,7 +247,7 @@ export function ExplorePage() {
             </div>
 
             <div className="space-y-1.5">
-              <span className="block text-xs font-medium text-text-muted">{t('explore.filters.field')}</span>
+              <span className="block text-xs font-medium text-text-secondary">{t('explore.filters.field')}</span>
               <MultiSelectCombobox
                 options={fieldOptions}
                 selected={selectedFields}
@@ -260,7 +260,7 @@ export function ExplorePage() {
             </div>
 
             <label className="space-y-1.5">
-              <span className="text-xs font-medium text-text-muted">{t('explore.filters.degree')}</span>
+              <span className="text-xs font-medium text-text-secondary">{t('explore.filters.degree')}</span>
               <select
                 value={degreeLevel}
                 onChange={(event) => updateFilters({ degree: event.target.value })}
@@ -274,7 +274,7 @@ export function ExplorePage() {
             </label>
 
             <label className="space-y-1.5">
-              <span className="text-xs font-medium text-text-muted">{t('explore.filters.language')}</span>
+              <span className="text-xs font-medium text-text-secondary">{t('explore.filters.language')}</span>
               <select
                 value={teachingLanguage}
                 onChange={(event) => updateFilters({ language: event.target.value })}
@@ -290,7 +290,7 @@ export function ExplorePage() {
             </label>
 
             <label className="space-y-1.5">
-              <span className="text-xs font-medium text-text-muted">{t('explore.filters.tuition')}</span>
+              <span className="text-xs font-medium text-text-secondary">{t('explore.filters.tuition')}</span>
               <select
                 value={maxTuition}
                 onChange={(event) => updateFilters({ maxTuition: event.target.value, tuitionFree: false })}
@@ -305,7 +305,7 @@ export function ExplorePage() {
             </label>
 
             <label className="space-y-1.5">
-              <span className="text-xs font-medium text-text-muted">{t('explore.filters.deadline')}</span>
+              <span className="text-xs font-medium text-text-secondary">{t('explore.filters.deadline')}</span>
               <select
                 value={deadlineRange}
                 onChange={(event) => updateFilters({ deadline: event.target.value })}
@@ -390,7 +390,7 @@ export function ExplorePage() {
                     key={course.id}
                     variants={{ hidden: { opacity: 0, y: 12 }, visible: { opacity: 1, y: 0 } }}
                     whileHover={{ y: -2 }}
-                    className="flex flex-col rounded-xl border border-border bg-surface p-4 transition-shadow hover:shadow-md"
+                    className="flex flex-col rounded-xl border border-border bg-surface p-4 transition-all hover:shadow-[0_4px_16px_rgba(13,115,119,0.10)]"
                   >
                     <div className="mb-2 flex items-start justify-between gap-3">
                       <span className={cn(
