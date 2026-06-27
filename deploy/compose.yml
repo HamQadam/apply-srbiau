@@ -89,6 +89,31 @@ services:
         condition: service_healthy
     restart: "no"
 
+  # ─────────────────────────────────────────────────────────────
+  # SwedenUA Crawler (Sweden — universityadmissions.se)
+  # ─────────────────────────────────────────────────────────────
+  swedenua-crawler:
+    build: ../crawlers
+    command: ["swedenua"]
+    profiles: ["crawlers", "all-crawlers"]
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-apply_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-apply_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-apply_db}
+      POSTGRES_HOST: database
+      POSTGRES_PORT: 5432
+      BATCH_SIZE: 50
+      SWEDENUA_RPS: 1.5
+      DB_WAIT_TIMEOUT_S: 180
+    volumes:
+      - crawler-state:/state
+    depends_on:
+      api:
+        condition: service_healthy
+      database:
+        condition: service_healthy
+    restart: "no"
+
   database:
     image: postgres:16
     container_name: apply-db

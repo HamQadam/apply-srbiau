@@ -7,7 +7,9 @@
     "maybeLater": "Maybe later",
     "save": "Save",
     "saving": "Saving...",
-    "confirm": "Confirm"
+    "confirm": "Confirm",
+    "tryAgain": "Try again",
+    "tryAgainHint": "Check your connection and try again."
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -25,7 +27,14 @@
     "lightMode": "Light",
     "langEn": "EN",
     "langFa": "FA",
-    "userFallback": "User"
+    "userFallback": "User",
+    "userMenu": "User menu",
+    "experiences": "Experiences",
+    "langFa": "FA",
+    "langEn": "EN",
+    "balanceLabel": "{{count}} Ghadam coins",
+    "balanceTooltipTitle": "Ghadam Coins",
+    "balanceTooltipBody": "Earn coins by completing your profile or sharing experiences. Spend them to unlock full applicant stories."
   },
   "home": {
     "hero": {
@@ -184,6 +193,7 @@
   },
   "program": {
     "matchScore": "{{score}}% match",
+    "statusLabel": "Application status",
     "unknown": "Unknown Program",
     "unknownUniversity": "Unknown University",
     "qsRank": "QS #{{rank}}",
@@ -212,7 +222,10 @@
       "addCustom": "Add custom item",
       "required": "Required",
       "optional": "Optional",
-      "requiredToggle": "Required document"
+      "requiredToggle": "Required document",
+      "removeItem": "Remove {{name}}",
+      "confirmRemoveTitle": "Remove this item?",
+      "confirmRemoveDescription": "This will permanently remove the checklist item."
     },
     "checklistUpdated": "Checklist updated",
     "checklistError": "Failed to update checklist",
@@ -240,8 +253,11 @@
       "entryPlaceholder": "Write your note...",
       "empty": "Click to add main notes...",
       "emptyEntries": "No quick notes yet. Click \"Add Note\" to create one.",
-      "pin": "Pin",
-      "unpin": "Unpin"
+      "pin": "Pin note",
+      "unpin": "Unpin note",
+      "deleteEntry": "Delete note",
+      "confirmRemoveTitle": "Delete this note?",
+      "confirmRemoveDescription": "This note will be permanently deleted."
     },
     "notesSaved": "Notes saved",
     "notesError": "Failed to save notes",
@@ -279,6 +295,8 @@
     "searchError": "Failed to search",
     "addError": "Failed to add program",
     "added": "Program added to tracker!",
+    "goToTracker": "View tracker",
+    "searchErrorTitle": "Couldn't load programs",
     "adding": "Adding...",
     "addToTracker": "+ Add to Tracker",
     "viewProgram": "View program website",
@@ -373,6 +391,16 @@
     "refineTitle": "Refine your matches",
     "refineSubtitle": "Small profile changes can make these recommendations more useful.",
     "gpaSummary": "GPA {{gpa}} / {{scale}}",
+    "band": {
+      "strong": "Strong match",
+      "good": "Good match",
+      "consider": "Worth considering",
+      "low": "Partial match"
+    },
+    "bandLegendLabel": "Score guide",
+    "scoreBandHint": "Based on your GPA, field, and country preferences",
+    "scoreLabel": "{{score}}% match — {{band}}",
+    "addToTrackerLabel": "Add {{name}} to tracker",
     "refinements": {
       "broaden_country": {
         "label": "Broaden countries",
@@ -403,6 +431,7 @@
   "addProgram": {
     "title": "Add a program",
     "subtitle": "Search the catalogue or add a program you found yourself.",
+    "modeLabel": "Add mode",
     "searchMode": "Search catalogue",
     "customMode": "Add manually",
     "searchPlaceholder": "Search by program or university name",
@@ -430,6 +459,7 @@
     "error": "Could not add program. Please try again."
   },
   "auth": {
+    "or": "or",
     "welcomeTitle": "Welcome to Ghadam",
     "welcomeSubtitle": "Track your university applications and learn from others' journeys",
     "phoneLabel": "Phone Number",
@@ -620,6 +650,8 @@
     "deadlineFall": "Fall deadline",
     "deadlineSpring": "Spring deadline",
     "gpa": "Minimum GPA",
+    "gpaGermanScale": "(1–4, lower is better)",
+    "gpaUsScale": "(0–4.0)",
     "months_one": "{{count}} month",
     "months_other": "{{count}} months",
     "unknown": "Not listed",

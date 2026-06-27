@@ -7,21 +7,28 @@ Unified command-line interface for running crawlers from various sources.
 Usage:
     crawl daad [options]
     crawl studyinnl [options]
+    crawl swedenua [options]
     crawl analyze-failures [options]
-    
+
 Examples:
     # Full DAAD crawl
     crawl daad
-    
+
     # StudyInNL with limit for testing
     crawl studyinnl --max-programs 100
-    
+
+    # Sweden (universityadmissions.se) — all semesters
+    crawl swedenua
+
+    # Sweden — specific semester IDs only
+    crawl swedenua --semester-ids 27 28
+
     # Dry run (no DB writes)
     crawl daad --dry-run
-    crawl studyinnl --dry-run
-    
+    crawl swedenua --dry-run
+
     # Analyze failed items
-    crawl analyze-failures --source studyinnl
+    crawl analyze-failures --source swedenua
 """
 from __future__ import annotations
 
@@ -125,6 +132,14 @@ class CrawlerSettings(BaseSettings):
     studyinnl_page_size: int = Field(
         default=50,
         validation_alias=AliasChoices("STUDYINNL_PAGE_SIZE", "studyinnl_page_size"),
+    )
+
+    # ─────────────────────────────────────────────────────────────
+    # SwedenUA-specific (universityadmissions.se)
+    # ─────────────────────────────────────────────────────────────
+    swedenua_rps: float = Field(
+        default=1.5,
+        validation_alias=AliasChoices("SWEDENUA_RPS", "swedenua_rps"),
     )
 
     def effective_database_url(self) -> str:
@@ -290,6 +305,53 @@ async def run_studyinnl(args: argparse.Namespace, cfg: CrawlerSettings) -> int:
         await db.aclose()
 
 
+async def run_swedenua(args: argparse.Namespace, cfg: CrawlerSettings) -> int:
+    """Run Sweden UA crawler — stores raw JSON to raw_crawl_items."""
+    from swedenua_ingestor import SwedenUACrawler
+    from base import IngestionEngine, IngestionConfig
+    from db import RawStore
+
+    log = logging.getLogger("cli.swedenua")
+
+    semester_ids: list[str] | None = None
+    if args.semester_ids:
+        semester_ids = [s.strip() for s in args.semester_ids]
+        log.info("Crawling specific semester IDs: %s", semester_ids)
+
+    crawler = SwedenUACrawler(
+        rps=cfg.swedenua_rps,
+        semester_ids=semester_ids,
+        max_programs=args.max_programs,
+        start_page=args.start_page or 1,
+    )
+
+    db = RawStore(
+        dsn=cfg.effective_database_url(),
+        schema=cfg.db_schema,
+        pool_max=cfg.db_pool_max,
+    )
+
+    ingestion_config = IngestionConfig(
+        batch_size=cfg.batch_size,
+        dry_run=args.dry_run,
+        save_failed_items=True,
+        failed_items_path=cfg.failed_items_path("swedenua"),
+        db_wait_timeout_s=cfg.db_wait_timeout_s,
+    )
+    engine = IngestionEngine(db, ingestion_config)
+
+    try:
+        await db.aopen()
+        crawl_stats, ingest_stats = await engine.run(crawler)
+
+        if crawl_stats and crawl_stats.total_failed > 0:
+            return 1
+        return 0
+
+    finally:
+        await db.aclose()
+
+
 async def run_analyze(args: argparse.Namespace, cfg: CrawlerSettings) -> int:
     """Analyze failed items from a previous run."""
     log = logging.getLogger("cli.analyze")
@@ -396,6 +458,11 @@ async def run_list_sources(args: argparse.Namespace) -> int:
     print("    Country: Netherlands")
     print("    Programs: ~1700+ (Bachelor, Master, Short courses)")
     print()
+    print("  swedenua")
+    print("    University Admissions Sweden (universityadmissions.se / UHR)")
+    print("    Country: Sweden")
+    print("    Programs: ~1300+ per semester (Bachelor, Master, PhD)")
+    print()
     print("=" * 50)
     return 0
 
@@ -411,11 +478,14 @@ def main() -> int:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  crawl daad                      # Crawl all DAAD programs
+  crawl daad                          # Crawl all DAAD programs
   crawl studyinnl --max-programs 100  # Crawl first 100 StudyInNL programs
-  crawl daad --dry-run            # Test without database writes
-  crawl analyze-failures --source daad  # Analyze DAAD failures
-  crawl sources                   # List available sources
+  crawl swedenua                      # Crawl all Swedish programs (all semesters)
+  crawl swedenua --semester-ids 27 28 # Crawl specific semesters
+  crawl swedenua --max-programs 50    # Test with 50 programs
+  crawl daad --dry-run                # Test without database writes
+  crawl analyze-failures --source swedenua  # Analyze Sweden failures
+  crawl sources                       # List available sources
         """,
     )
     parser.add_argument(
@@ -475,6 +545,42 @@ Examples:
     )
     
     # ─────────────────────────────────────────────────────────────
+    # SwedenUA Command
+    # ─────────────────────────────────────────────────────────────
+    swedenua_parser = subparsers.add_parser(
+        "swedenua",
+        help="Crawl universityadmissions.se (Swedish programs)",
+    )
+    swedenua_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Don't write to database",
+    )
+    swedenua_parser.add_argument(
+        "--semester-ids",
+        type=str,
+        nargs="+",
+        default=None,
+        metavar="ID",
+        help=(
+            "Specific semester IDs to crawl (e.g. 27 28). "
+            "Defaults to all available semesters from /api/sok/terminer."
+        ),
+    )
+    swedenua_parser.add_argument(
+        "--max-programs",
+        type=int,
+        default=None,
+        help="Maximum programs to fetch across all semesters (for testing)",
+    )
+    swedenua_parser.add_argument(
+        "--start-page",
+        type=int,
+        default=1,
+        help="Starting page number (default: 1)",
+    )
+
+    # ─────────────────────────────────────────────────────────────
     # Analyze Command
     # ─────────────────────────────────────────────────────────────
     analyze_parser = subparsers.add_parser(
@@ -484,7 +590,7 @@ Examples:
     analyze_parser.add_argument(
         "--source",
         type=str,
-        choices=["daad", "studyinnl"],
+        choices=["daad", "studyinnl", "swedenua"],
         help="Source to analyze (uses default path)",
     )
     analyze_parser.add_argument(
@@ -521,6 +627,8 @@ Examples:
         return asyncio.run(run_daad(args, cfg))
     elif args.command == "studyinnl":
         return asyncio.run(run_studyinnl(args, cfg))
+    elif args.command == "swedenua":
+        return asyncio.run(run_swedenua(args, cfg))
     elif args.command == "analyze-failures":
         return asyncio.run(run_analyze(args, cfg))
     elif args.command == "sources":

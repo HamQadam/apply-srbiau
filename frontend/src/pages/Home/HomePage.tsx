@@ -1,4 +1,4 @@
-import { motion, useInView } from 'framer-motion';
+import { motion, useInView, useReducedMotion } from 'framer-motion';
 import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
@@ -18,12 +18,13 @@ const stagger = {
 function RevealSection({ children, className }: { children: React.ReactNode; className?: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const isInView = useInView(ref, { once: true, margin: '-80px' });
+  const prefersReduced = useReducedMotion();
   return (
     <motion.div
       ref={ref}
       variants={fadeIn}
-      initial="hidden"
-      animate={isInView ? 'visible' : 'hidden'}
+      initial={prefersReduced ? 'visible' : 'hidden'}
+      animate={prefersReduced ? 'visible' : (isInView ? 'visible' : 'hidden')}
       className={className}
     >
       {children}
@@ -135,9 +136,6 @@ export function HomePage() {
             <div className="grid md:grid-cols-2 gap-12 md:gap-20 items-start">
               {/* Left: the argument */}
               <div>
-                <p className="text-xs font-semibold text-brand-primary tracking-widest uppercase mb-4">
-                  {t('home.clarity.label')}
-                </p>
                 <h2 className="font-display text-3xl md:text-4xl font-bold text-text-primary leading-tight tracking-[-0.02em] text-balance">
                   {t('home.clarity.headline')}
                 </h2>

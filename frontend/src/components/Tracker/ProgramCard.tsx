@@ -77,7 +77,11 @@ export function ProgramCard({ program, onStatusChange, onDelete }: ProgramCardPr
           {/* Badges */}
           <div className="flex flex-wrap items-center gap-2 mt-3">
             {/* Status */}
+            <label className="sr-only" htmlFor={`status-${program.id}`}>
+              {t('program.statusLabel', 'Application status')}
+            </label>
             <select
+              id={`status-${program.id}`}
               value={program.status}
               onChange={(e) => onStatusChange(program.id, e.target.value)}
               className={cn(
@@ -128,8 +132,8 @@ export function ProgramCard({ program, onStatusChange, onDelete }: ProgramCardPr
             onClick={() => onDelete(program.id)}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="text-text-muted/40 hover:text-status-danger p-1.5 rounded-lg hover:bg-status-danger/10 transition-colors opacity-0 group-hover:opacity-100"
-            title={t('program.remove')}
+            className="text-text-muted hover:text-status-danger p-1.5 rounded-lg hover:bg-status-danger/10 transition-colors focus-visible:opacity-100"
+            aria-label={t('program.remove')}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -162,7 +166,7 @@ export function ProgramCard({ program, onStatusChange, onDelete }: ProgramCardPr
       {/* Notes preview if any */}
       {program.notes && (
         <p className="mt-4 text-sm text-text-muted truncate pt-4 border-t border-border">
-          📝 {program.notes}
+          {program.notes}
         </p>
       )}
     </motion.div>

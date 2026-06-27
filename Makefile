@@ -28,6 +28,8 @@ crawl-daad:
 	 $(COMPOSE) run --build --rm daad-crawler
 crawl-nl:
 	 $(COMPOSE) run --build --rm studyinnl-crawler
+crawl-sweden:
+	 $(COMPOSE) run --build --rm swedenua-crawler
 up-front:
 	 $(COMPOSE) up frontend -d --build && $(COMPOSE) logs -f frontend
 up-back:

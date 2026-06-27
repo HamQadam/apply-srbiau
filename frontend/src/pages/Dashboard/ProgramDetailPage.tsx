@@ -36,11 +36,13 @@ export function ProgramDetailPage() {
   const [showAddNote, setShowAddNote] = useState(false);
   const [newNoteContent, setNewNoteContent] = useState('');
   const [newNoteCategory, setNewNoteCategory] = useState<string>('general');
+  const [pendingDeleteNoteId, setPendingDeleteNoteId] = useState<string | null>(null);
 
   // Checklist state
   const [showAddItem, setShowAddItem] = useState(false);
   const [newItemName, setNewItemName] = useState('');
   const [newItemRequired, setNewItemRequired] = useState(true);
+  const [pendingDeleteChecklistId, setPendingDeleteChecklistId] = useState<string | null>(null);
 
   useEffect(() => { loadProgram(); }, [id]);
 
@@ -100,6 +102,7 @@ export function ProgramDetailPage() {
   const handleDeleteChecklistItem = async (itemId: string) => {
     if (!program) return;
     setSaving(true);
+    setPendingDeleteChecklistId(null);
     try {
       const updated = await trackerApi.deleteChecklistItem(program.id, itemId);
       setProgram({ ...program, document_checklist: updated.document_checklist });
@@ -150,6 +153,7 @@ export function ProgramDetailPage() {
   const handleDeleteNoteEntry = async (entryId: string) => {
     if (!program) return;
     setSaving(true);
+    setPendingDeleteNoteId(null);
     try {
       await trackerApi.deleteNoteEntry(program.id, entryId);
       setNoteEntries(noteEntries.filter(e => e.id !== entryId));
@@ -463,18 +467,27 @@ export function ProgramDetailPage() {
                 {sortedNoteEntries.map(entry => {
                   const category = NOTE_CATEGORIES[entry.category as keyof typeof NOTE_CATEGORIES] || NOTE_CATEGORIES.general;
                   return (
-                    <div key={entry.id} className={cn('p-3 rounded-lg border group', entry.pinned ? 'border-status-warning/30 bg-status-warning/5' : 'border-border bg-elevated')}>
+                    <div key={entry.id} className={cn('p-3 rounded-lg border', entry.pinned ? 'border-status-warning/30 bg-status-warning/5' : 'border-border bg-elevated')}>
                       <div className="flex items-center justify-between mb-1.5">
                         <span className={cn('text-xs font-medium px-2 py-0.5 rounded-md', category.color)}>
                           {category.icon} {t(category.labelKey)}
                         </span>
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => handleTogglePin(entry.id)} className={cn('p-1 rounded text-xs', entry.pinned ? 'text-status-warning' : 'text-text-muted hover:text-status-warning')} title={entry.pinned ? t('programDetail.notes.unpin') : t('programDetail.notes.pin')}>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => handleTogglePin(entry.id)}
+                            aria-label={entry.pinned ? t('programDetail.notes.unpin') : t('programDetail.notes.pin')}
+                            aria-pressed={entry.pinned}
+                            className={cn('p-1 rounded transition-colors', entry.pinned ? 'text-status-warning' : 'text-text-muted hover:text-status-warning')}
+                          >
                             <svg className="w-3.5 h-3.5" fill={entry.pinned ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
                             </svg>
                           </button>
-                          <button onClick={() => handleDeleteNoteEntry(entry.id)} className="p-1 rounded text-text-muted hover:text-status-danger">
+                          <button
+                            onClick={() => setPendingDeleteNoteId(entry.id)}
+                            aria-label={t('programDetail.notes.deleteEntry')}
+                            className="p-1 rounded text-text-muted hover:text-status-danger transition-colors"
+                          >
                             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                             </svg>
@@ -537,8 +550,9 @@ export function ProgramDetailPage() {
                     </label>
                     {item.id && (
                       <button
-                        onClick={() => handleDeleteChecklistItem(item.id!)}
-                        className="text-text-muted/40 hover:text-status-danger p-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                        onClick={() => setPendingDeleteChecklistId(item.id!)}
+                        aria-label={t('programDetail.checklist.removeItem', { name: item.name })}
+                        className="text-text-muted hover:text-status-danger p-1 transition-colors flex-shrink-0"
                       >
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -658,6 +672,30 @@ export function ProgramDetailPage() {
         busy={saving}
         onCancel={() => setShowDeleteConfirm(false)}
         onConfirm={handleDelete}
+      />
+
+      {/* Confirm checklist item delete */}
+      <ConfirmDialog
+        open={Boolean(pendingDeleteChecklistId)}
+        title={t('programDetail.checklist.confirmRemoveTitle')}
+        description={t('programDetail.checklist.confirmRemoveDescription')}
+        confirmLabel={t('common.delete')}
+        destructive
+        busy={saving}
+        onCancel={() => setPendingDeleteChecklistId(null)}
+        onConfirm={() => pendingDeleteChecklistId && handleDeleteChecklistItem(pendingDeleteChecklistId)}
+      />
+
+      {/* Confirm note entry delete */}
+      <ConfirmDialog
+        open={Boolean(pendingDeleteNoteId)}
+        title={t('programDetail.notes.confirmRemoveTitle')}
+        description={t('programDetail.notes.confirmRemoveDescription')}
+        confirmLabel={t('common.delete')}
+        destructive
+        busy={saving}
+        onCancel={() => setPendingDeleteNoteId(null)}
+        onConfirm={() => pendingDeleteNoteId && handleDeleteNoteEntry(pendingDeleteNoteId)}
       />
     </PageTransition>
   );

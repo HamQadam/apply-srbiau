@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -14,7 +14,28 @@ export function Navbar() {
   const { toggleTheme, resolvedTheme } = useTheme();
   const { language, toggleLanguage, direction } = useLanguage();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
   const MotionLink = motion(Link);
+
+  // Close user menu on outside click or Escape
+  useEffect(() => {
+    if (!isUserMenuOpen) return;
+    const handleOutside = (e: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setIsUserMenuOpen(false);
+      }
+    };
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsUserMenuOpen(false);
+    };
+    document.addEventListener('mousedown', handleOutside);
+    document.addEventListener('keydown', handleEsc);
+    return () => {
+      document.removeEventListener('mousedown', handleOutside);
+      document.removeEventListener('keydown', handleEsc);
+    };
+  }, [isUserMenuOpen]);
 
   const isActive = (path: string) =>
     location.pathname === path || location.pathname.startsWith(`${path}/`);
@@ -117,64 +138,98 @@ export function Navbar() {
             </div>
             {isAuthenticated ? (
               <>
-                {/* Ghadam Balance */}
-                <MotionLink
-                  to="/wallet"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.97 }}
-                  className="hidden md:flex items-center gap-1 px-3 py-1.5 bg-brand-accent/10 text-brand-accent rounded-full text-sm font-medium hover:bg-brand-accent/20 transition-colors"
-                >
-                  <span>🪙</span>
-                  <span>{user?.ghadam_balance ?? 0}</span>
-                </MotionLink>
+                {/* Ghadam Balance — with inline explanation */}
+                <div className="relative hidden md:block group/balance">
+                  <MotionLink
+                    to="/wallet"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.97 }}
+                    aria-label={t('nav.balanceLabel', { count: user?.ghadam_balance ?? 0 })}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-accent/10 text-brand-accent rounded-full text-sm font-medium hover:bg-brand-accent/20 transition-colors"
+                  >
+                    <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                      <circle cx="8" cy="8" r="7" fill="currentColor" opacity="0.2"/>
+                      <text x="8" y="11.5" textAnchor="middle" fontSize="9" fontWeight="700" fill="currentColor">G</text>
+                    </svg>
+                    <span>{user?.ghadam_balance ?? 0}</span>
+                  </MotionLink>
+                  <div
+                    role="tooltip"
+                    className="pointer-events-none absolute top-full mt-2 end-0 w-52 rounded-lg bg-inverse-background text-inverse px-3 py-2.5 text-[11px] leading-snug opacity-0 group-hover/balance:opacity-100 transition-opacity z-[60]"
+                  >
+                    <p className="font-semibold text-[12px]">{t('nav.balanceTooltipTitle')}</p>
+                    <p className="text-inverse-muted mt-0.5">{t('nav.balanceTooltipBody')}</p>
+                  </div>
+                </div>
 
                 {/* User Menu */}
-                <div className="relative group hidden md:block">
+                <div ref={userMenuRef} className="relative hidden md:block">
                   <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.97 }}
-                    className="flex items-center gap-2 px-3 py-2 text-sm text-text-secondary hover:text-text-primary"
+                    onClick={() => setIsUserMenuOpen(v => !v)}
+                    aria-expanded={isUserMenuOpen}
+                    aria-haspopup="menu"
+                    aria-label={user?.display_name || t('nav.userFallback')}
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-text-secondary hover:text-text-primary rounded-lg hover:bg-elevated transition-colors"
                   >
-                    <span className="w-8 h-8 bg-elevated rounded-full flex items-center justify-center">
-                      {user?.display_name?.[0]?.toUpperCase() || '👤'}
+                    <span className="w-8 h-8 bg-elevated rounded-full flex items-center justify-center text-sm font-medium" aria-hidden="true">
+                      {user?.display_name?.[0]?.toUpperCase() || '?'}
                     </span>
                   </motion.button>
-                  <div className="absolute end-0 mt-1 w-56 bg-surface border border-border rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
-                    <div className="px-4 py-3 border-b border-border">
-                      <p className="text-sm font-medium text-text-primary">
-                        {user?.display_name || t('nav.userFallback')}
-                      </p>
-                      <p className="text-xs text-text-muted">{user?.phone}</p>
-                    </div>
-                    <div className="py-1">
-                      {user?.is_admin && (
-                        <MotionLink
-                          to="/admin/experiences"
-                          whileHover={{ scale: 1.01 }}
-                          whileTap={{ scale: 0.97 }}
-                          className="block px-4 py-2 text-sm text-text-secondary hover:bg-elevated"
-                        >
-                          {t('nav.adminExperiences', 'Experience review')}
-                        </MotionLink>
-                      )}
-                      <MotionLink
-                        to="/settings"
-                        whileHover={{ scale: 1.01 }}
-                        whileTap={{ scale: 0.97 }}
-                        className="block px-4 py-2 text-sm text-text-secondary hover:bg-elevated"
+                  <AnimatePresence>
+                    {isUserMenuOpen && (
+                      <motion.div
+                        role="menu"
+                        aria-label={t('nav.userMenu', 'User menu')}
+                        initial={{ opacity: 0, y: -4, scale: 0.97 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -4, scale: 0.97 }}
+                        transition={{ duration: 0.12, ease: 'easeOut' }}
+                        className="absolute end-0 mt-1 w-56 bg-surface border border-border rounded-lg shadow-lg z-[60] overflow-hidden"
                       >
-                        {t('nav.settings')}
-                      </MotionLink>
-                      <motion.button
-                        onClick={logout}
-                        whileHover={{ scale: 1.01 }}
-                        whileTap={{ scale: 0.97 }}
-                        className="block w-full text-start px-4 py-2 text-sm text-status-danger hover:bg-elevated"
-                      >
-                        {t('nav.signOut')}
-                      </motion.button>
-                    </div>
-                  </div>
+                        <div className="px-4 py-3 border-b border-border">
+                          <p className="text-sm font-medium text-text-primary">
+                            {user?.display_name || t('nav.userFallback')}
+                          </p>
+                          <p className="text-xs text-text-muted">{user?.phone}</p>
+                        </div>
+                        <div className="py-1">
+                          {user?.is_admin && (
+                            <MotionLink
+                              to="/admin/experiences"
+                              role="menuitem"
+                              onClick={() => setIsUserMenuOpen(false)}
+                              whileHover={{ scale: 1.01 }}
+                              whileTap={{ scale: 0.97 }}
+                              className="block px-4 py-2 text-sm text-text-secondary hover:bg-elevated transition-colors"
+                            >
+                              {t('nav.adminExperiences', 'Experience review')}
+                            </MotionLink>
+                          )}
+                          <MotionLink
+                            to="/settings"
+                            role="menuitem"
+                            onClick={() => setIsUserMenuOpen(false)}
+                            whileHover={{ scale: 1.01 }}
+                            whileTap={{ scale: 0.97 }}
+                            className="block px-4 py-2 text-sm text-text-secondary hover:bg-elevated transition-colors"
+                          >
+                            {t('nav.settings')}
+                          </MotionLink>
+                          <motion.button
+                            onClick={() => { logout(); setIsUserMenuOpen(false); }}
+                            role="menuitem"
+                            whileHover={{ scale: 1.01 }}
+                            whileTap={{ scale: 0.97 }}
+                            className="block w-full text-start px-4 py-2 text-sm text-status-danger hover:bg-elevated transition-colors"
+                          >
+                            {t('nav.signOut')}
+                          </motion.button>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               </>
             ) : (

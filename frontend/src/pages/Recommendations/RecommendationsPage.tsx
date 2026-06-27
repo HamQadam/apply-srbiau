@@ -12,46 +12,62 @@ import { useAuth } from '../../contexts/AuthContext';
 import { formatCurrency } from '../../lib/format';
 import { cn } from '../../lib/cn';
 
-// Score ring drawn as SVG — no gradient, semantically coloured
+// Score band class names — uses CSS variables so dark mode works automatically
+const SCORE_CLASSES = (score: number): { ring: string; text: string } =>
+  score >= 80
+    ? { ring: 'text-status-success', text: 'text-status-success' }
+    : score >= 60
+    ? { ring: 'text-brand-primary', text: 'text-brand-primary' }
+    : score >= 40
+    ? { ring: 'text-status-warning', text: 'text-status-warning' }
+    : { ring: 'text-text-muted', text: 'text-text-muted' };
+
+// Score ring drawn as SVG — uses currentColor so Tailwind dark mode applies
 function ScoreRing({ score }: { score: number }) {
   const r = 28;
   const circ = 2 * Math.PI * r;
   const filled = (score / 100) * circ;
-  const color =
-    score >= 80 ? 'var(--color-success)' :
-    score >= 60 ? 'var(--color-teal)' :
-    score >= 40 ? 'var(--color-warning)' :
-    'var(--color-muted)';
+  const cls = SCORE_CLASSES(score);
 
   return (
-    <svg width="72" height="72" viewBox="0 0 72 72" aria-hidden="true" className="flex-shrink-0">
-      <style>{`
-        .score-ring { --color-teal: rgb(13 115 119); --color-success: rgb(16 185 129); --color-warning: rgb(245 158 11); --color-muted: rgb(107 114 128); }
-      `}</style>
-      <g className="score-ring">
-        <circle cx="36" cy="36" r={r} fill="none" stroke="currentColor" strokeWidth="6" className="text-elevated" />
-        <circle
-          cx="36" cy="36" r={r} fill="none"
-          stroke={color}
-          strokeWidth="6"
-          strokeDasharray={`${filled} ${circ}`}
-          strokeLinecap="round"
-          transform="rotate(-90 36 36)"
-          style={{ transition: 'stroke-dasharray 0.5s ease-out' }}
-        />
-        <text x="36" y="36" textAnchor="middle" dominantBaseline="central"
-          fontSize="14" fontWeight="700" fill={color}>
-          {score}
-        </text>
-      </g>
+    <svg
+      width="72"
+      height="72"
+      viewBox="0 0 72 72"
+      aria-hidden="true"
+      className={`flex-shrink-0 ${cls.ring}`}
+    >
+      <circle cx="36" cy="36" r={r} fill="none" stroke="currentColor" strokeWidth="6" opacity="0.15" />
+      <circle
+        cx="36" cy="36" r={r} fill="none"
+        stroke="currentColor"
+        strokeWidth="6"
+        strokeDasharray={`${filled} ${circ}`}
+        strokeLinecap="round"
+        transform="rotate(-90 36 36)"
+        style={{ transition: 'stroke-dasharray 0.5s ease-out' }}
+      />
+      <text x="36" y="36" textAnchor="middle" dominantBaseline="central"
+        fontSize="14" fontWeight="700" fill="currentColor">
+        {score}
+      </text>
     </svg>
   );
+}
+
+// Score band label for screen readers and tooltips
+function scoreBandLabel(score: number, t: (k: string) => string): string {
+  if (score >= 80) return t('recommendations.band.strong');
+  if (score >= 60) return t('recommendations.band.good');
+  if (score >= 40) return t('recommendations.band.consider');
+  return t('recommendations.band.low');
 }
 
 export const RecommendationsPage: React.FC = () => {
   const { refreshUser } = useAuth();
   const { t, i18n } = useTranslation();
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [total, setTotal] = useState(0);
   const [profileSummary, setProfileSummary] = useState<RecommendationsResponse['profile_summary'] | null>(null);
@@ -78,6 +94,7 @@ export const RecommendationsPage: React.FC = () => {
 
   const loadRecommendations = async (newOffset = 0) => {
     setLoading(true);
+    if (newOffset === 0) setLoadError(false);
     try {
       const data = await matchingApi.getRecommendations({ limit, offset: newOffset });
       setRecommendations(newOffset === 0 ? data.recommendations : prev => [...prev, ...data.recommendations]);
@@ -88,7 +105,8 @@ export const RecommendationsPage: React.FC = () => {
       setOffset(newOffset);
     } catch (err) {
       console.error('Error loading recommendations:', err);
-      toast.error(t('recommendations.loadError'));
+      if (newOffset === 0) setLoadError(true);
+      else toast.error(t('recommendations.loadError'));
     } finally {
       setLoading(false);
     }
@@ -113,6 +131,31 @@ export const RecommendationsPage: React.FC = () => {
       setTracking(null);
     }
   };
+
+  // ── Error state ──────────────────────────────────────────
+  if (loadError && !showWizard) {
+    return (
+      <PageTransition>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="mt-16 flex flex-col items-center text-center max-w-sm mx-auto">
+            <div className="w-12 h-12 rounded-xl bg-status-danger/10 flex items-center justify-center mb-4" aria-hidden="true">
+              <svg className="w-6 h-6 text-status-danger" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+              </svg>
+            </div>
+            <p className="text-text-primary font-semibold">{t('recommendations.loadError')}</p>
+            <p className="mt-1 text-sm text-text-muted">{t('common.tryAgainHint')}</p>
+            <button
+              onClick={() => loadRecommendations(0)}
+              className="mt-6 inline-flex items-center gap-2 px-5 py-2.5 bg-brand-primary text-white font-medium rounded-lg hover:bg-brand-primary/90 transition-colors text-sm"
+            >
+              {t('common.tryAgain')}
+            </button>
+          </div>
+        </div>
+      </PageTransition>
+    );
+  }
 
   // ── Wizard view ──────────────────────────────────────────
   if (showWizard) {
@@ -145,6 +188,19 @@ export const RecommendationsPage: React.FC = () => {
             <p className="mt-1 text-text-secondary text-sm">
               {t('recommendations.subtitle', { count: total })}
             </p>
+            {/* Score band legend — small, always visible */}
+            <div className="flex flex-wrap gap-3 mt-3" aria-label={t('recommendations.bandLegendLabel', 'Score guide')}>
+              {([
+                { min: 80, color: 'text-status-success', key: 'band.strong' },
+                { min: 60, color: 'text-brand-primary', key: 'band.good' },
+                { min: 40, color: 'text-status-warning', key: 'band.consider' },
+              ] as const).map(({ min, color, key }) => (
+                <span key={key} className="flex items-center gap-1 text-xs text-text-muted">
+                  <span className={`font-semibold ${color}`}>{min}+</span>
+                  {t(`recommendations.${key}`)}
+                </span>
+              ))}
+            </div>
           </div>
           <button
             onClick={() => setShowWizard(true)}
@@ -237,20 +293,29 @@ export const RecommendationsPage: React.FC = () => {
                   ...rec.warnings.slice(0, 2).map(label => ({ label, kind: 'warning' as const, detail: null, points: 0, code: label })),
                 ];
 
+            const bandLabel = scoreBandLabel(rec.match_score, t);
             return (
-              <motion.div
+              <motion.article
                 key={rec.id}
+                aria-label={`${rec.program_name} – ${rec.university_name}`}
                 variants={{ hidden: { opacity: 0 }, visible: { opacity: 1 } }}
                 whileHover={{ y: -2 }}
                 className="bg-surface rounded-xl border border-border hover:shadow-[0_4px_16px_rgba(13,115,119,0.10)] transition-all flex flex-col"
               >
                 {/* Card header: score ring + program info side by side */}
                 <div className="p-5 flex items-start gap-4 border-b border-border">
-                  <ScoreRing score={rec.match_score} />
+                  {/* Score ring — band label always visible below */}
+                  <div className="flex flex-col items-center gap-1 flex-shrink-0">
+                    <ScoreRing score={rec.match_score} />
+                    <span
+                      aria-label={t('recommendations.scoreLabel', { score: rec.match_score, band: bandLabel })}
+                      className="text-[10px] font-medium text-text-muted text-center leading-tight"
+                    >
+                      {bandLabel}
+                    </span>
+                  </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[11px] font-medium text-text-muted uppercase tracking-wide mb-1">
-                      {t('recommendations.match')} · {rec.match_score}%
-                    </p>
+                    <span className="sr-only">{t('recommendations.match')} · {rec.match_score}%</span>
                     <h3 className="font-semibold text-text-primary text-sm leading-snug line-clamp-2">
                       {rec.program_name}
                     </h3>
@@ -312,6 +377,7 @@ export const RecommendationsPage: React.FC = () => {
                     disabled={tracking === rec.id}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.97 }}
+                    aria-label={t('recommendations.addToTrackerLabel', { name: rec.program_name })}
                     className="w-full py-2.5 bg-brand-primary text-white rounded-lg text-sm font-medium hover:bg-brand-primary/90 transition-colors disabled:opacity-50"
                   >
                     {tracking === rec.id ? (
@@ -322,7 +388,7 @@ export const RecommendationsPage: React.FC = () => {
                     ) : t('recommendations.addToTracker')}
                   </motion.button>
                 </div>
-              </motion.div>
+              </motion.article>
             );
           })}
         </motion.div>

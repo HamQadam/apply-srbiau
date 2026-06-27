@@ -63,6 +63,7 @@ export function ExperienceSubmitPage() {
   const [program, setProgram] = useState<TrackedProgram | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [attempted, setAttempted] = useState(false);
   const [universities, setUniversities] = useState<University[]>([]);
   const [universityQuery, setUniversityQuery] = useState('');
   const [countryOptions, setCountryOptions] = useState<Array<{ country: string; count: number }>>([]);
@@ -171,6 +172,7 @@ export function ExperienceSubmitPage() {
   };
 
   const submit = async () => {
+    setAttempted(true);
     if (!canSubmit) { toast.error(t('experienceSubmit.validation.incomplete', { items: missingItems.join(', ') })); return; }
     setSaving(true);
     try {
@@ -238,21 +240,57 @@ export function ExperienceSubmitPage() {
                   <input
                     id="experience-university"
                     value={universityQuery}
+                    role="combobox"
+                    aria-expanded={showUniversityOptions && universities.length > 0}
+                    aria-haspopup="listbox"
+                    aria-autocomplete="list"
+                    aria-label={t('experienceSubmit.fields.university')}
                     onFocus={() => setShowUniversityOptions(true)}
-                    onBlur={() => setTimeout(() => setShowUniversityOptions(false), 150)}
+                    onBlur={() => setTimeout(() => setShowUniversityOptions(false), 200)}
                     onChange={e => changeUniversityName(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Escape') { setShowUniversityOptions(false); }
+                      if (e.key === 'ArrowDown' && showUniversityOptions && universities.length > 0) {
+                        e.preventDefault();
+                        const first = document.querySelector<HTMLButtonElement>('[data-university-option]');
+                        first?.focus();
+                      }
+                    }}
                     placeholder={t('experienceSubmit.fields.universityPlaceholder')}
                     className={inputCls}
                   />
                   {showUniversityOptions && universities.length > 0 && (
-                    <div className="absolute z-10 top-full mt-1 w-full max-h-56 overflow-auto rounded-lg border border-border bg-surface shadow-lg">
-                      {universities.map(u => (
+                    <div
+                      role="listbox"
+                      aria-label={t('experienceSubmit.fields.university')}
+                      className="absolute z-10 top-full mt-1 w-full max-h-56 overflow-auto rounded-lg border border-border bg-surface shadow-lg"
+                    >
+                      {universities.map((u, idx) => (
                         <button
                           key={u.id}
                           type="button"
+                          role="option"
+                          aria-selected={form.university_id === u.id}
+                          data-university-option
                           onMouseDown={e => e.preventDefault()}
                           onClick={() => selectUniversity(u)}
-                          className="block w-full px-3 py-2.5 text-start hover:bg-elevated transition-colors"
+                          onKeyDown={e => {
+                            if (e.key === 'ArrowDown') {
+                              e.preventDefault();
+                              const next = document.querySelectorAll<HTMLButtonElement>('[data-university-option]')[idx + 1];
+                              next?.focus();
+                            }
+                            if (e.key === 'ArrowUp') {
+                              e.preventDefault();
+                              if (idx === 0) {
+                                document.getElementById('experience-university')?.focus();
+                              } else {
+                                const prev = document.querySelectorAll<HTMLButtonElement>('[data-university-option]')[idx - 1];
+                                prev?.focus();
+                              }
+                            }
+                          }}
+                          className="block w-full px-3 py-2.5 text-start hover:bg-elevated transition-colors focus:bg-elevated focus:outline-none"
                         >
                           <span className="block text-sm font-medium text-text-primary">{u.name}</span>
                           <span className="block text-xs text-text-muted">{u.city}, {u.country}</span>
@@ -422,8 +460,8 @@ export function ExperienceSubmitPage() {
             </label>
           </Section>
 
-          {/* Validation summary */}
-          {missingItems.length > 0 && (
+          {/* Validation summary — only shown after first submit attempt */}
+          {attempted && missingItems.length > 0 && (
             <div className="rounded-lg border border-status-danger/30 bg-status-danger/5 px-4 py-3">
               <p className="text-xs font-medium text-status-danger mb-1">{t('experienceSubmit.validation.incomplete', { items: '' })}</p>
               <ul className="list-disc list-inside space-y-0.5">

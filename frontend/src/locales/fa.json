@@ -7,7 +7,9 @@
     "maybeLater": "بعداً",
     "save": "ذخیره",
     "saving": "یه لحظه...",
-    "confirm": "تایید"
+    "confirm": "تایید",
+    "tryAgain": "دوباره امتحان کن",
+    "tryAgainHint": "اتصال اینترنت رو چک کن و دوباره امتحان کن."
   },
   "nav": {
     "dashboard": "داشبورد",
@@ -25,7 +27,14 @@
     "lightMode": "روشن",
     "langEn": "EN",
     "langFa": "FA",
-    "userFallback": "کاربر"
+    "userFallback": "کاربر",
+    "userMenu": "منوی کاربر",
+    "experiences": "تجربه‌ها",
+    "langFa": "FA",
+    "langEn": "EN",
+    "balanceLabel": "{{count}} سکه گام",
+    "balanceTooltipTitle": "سکه‌های گام",
+    "balanceTooltipBody": "با تکمیل پروفایل یا به اشتراک گذاشتن تجربه سکه بگیر. برای باز کردن داستان‌های کامل متقاضیان خرج کن."
   },
   "home": {
     "hero": {
@@ -184,6 +193,7 @@
   },
   "program": {
     "matchScore": "{{score}}٪ تطابق",
+    "statusLabel": "وضعیت درخواست",
     "unknown": "برنامه نامشخص",
     "unknownUniversity": "دانشگاه نامشخص",
     "qsRank": "QS #{{rank}}",
@@ -212,7 +222,10 @@
       "addCustom": "اضافه کردن مورد جدید",
       "required": "ضروری",
       "optional": "اختیاری",
-      "requiredToggle": "مدرک ضروری"
+      "requiredToggle": "مدرک ضروری",
+      "removeItem": "حذف {{name}}",
+      "confirmRemoveTitle": "این مورد حذف شود؟",
+      "confirmRemoveDescription": "این مورد به طور دائم از چک‌لیست حذف می‌شود."
     },
     "checklistUpdated": "چک‌لیست آپدیت شد",
     "checklistError": "آپدیت نشد",
@@ -240,8 +253,11 @@
       "entryPlaceholder": "یادداشت جدید...",
       "empty": "کلیک کن و یادداشت بنویس...",
       "emptyEntries": "هنوز یادداشتی ننوشتی. بزن روی «یادداشت جدید».",
-      "pin": "پین کن",
-      "unpin": "پین رو بردار"
+      "pin": "پین کردن یادداشت",
+      "unpin": "برداشتن پین",
+      "deleteEntry": "حذف یادداشت",
+      "confirmRemoveTitle": "این یادداشت حذف شود؟",
+      "confirmRemoveDescription": "این یادداشت به طور دائم حذف می‌شود."
     },
     "notesSaved": "ذخیره شد ✓",
     "notesError": "ذخیره نشد",
@@ -278,7 +294,9 @@
     "filtersError": "فیلترها لود نشدن",
     "searchError": "جستجو نشد، دوباره امتحان کن",
     "addError": "اضافه نشد",
-    "added": "به لیستت اضافه شد! 🎯",
+    "added": "به لیستت اضافه شد!",
+    "goToTracker": "برو به ترکر",
+    "searchErrorTitle": "برنامه‌ها لود نشدن",
     "adding": "یه لحظه...",
     "addToTracker": "+ اضافه کن",
     "viewProgram": "مشاهده سایت برنامه",
@@ -373,6 +391,16 @@
     "refineTitle": "پیشنهادها رو دقیق‌تر کن",
     "refineSubtitle": "چند تغییر کوچک توی پروفایل می‌تونه نتیجه‌ها رو کاربردی‌تر کنه.",
     "gpaSummary": "معدل {{gpa}} از {{scale}}",
+    "band": {
+      "strong": "تطابق عالی",
+      "good": "تطابق خوب",
+      "consider": "ارزش بررسی",
+      "low": "تطابق جزئی"
+    },
+    "bandLegendLabel": "راهنمای امتیاز",
+    "scoreBandHint": "بر اساس معدل، رشته و کشور موردنظر",
+    "scoreLabel": "{{score}}٪ تطابق — {{band}}",
+    "addToTrackerLabel": "اضافه کردن {{name}} به لیست",
     "refinements": {
       "broaden_country": {
         "label": "کشورها رو بازتر کن",
@@ -403,6 +431,7 @@
   "addProgram": {
     "title": "اضافه کردن برنامه",
     "subtitle": "از فهرست سرچ کن یا یه برنامه‌ای که خودت پیدا کردی رو اضافه کن.",
+    "modeLabel": "روش افزودن",
     "searchMode": "سرچ در فهرست",
     "customMode": "اضافه کردن دستی",
     "searchPlaceholder": "سرچ بر اساس نام برنامه یا دانشگاه",
@@ -430,6 +459,7 @@
     "error": "نشد برنامه رو اضافه کرد. دوباره امتحان کن."
   },
   "auth": {
+    "or": "یا",
     "welcomeTitle": "به گام خوش اومدی! 👋",
     "welcomeSubtitle": "اپلای‌هات رو پیگیری کن و از تجربه بقیه یاد بگیر",
     "phoneLabel": "شماره موبایل",
@@ -620,6 +650,8 @@
     "deadlineFall": "ددلاین پاییز",
     "deadlineSpring": "ددلاین بهار",
     "gpa": "حداقل معدل",
+    "gpaGermanScale": "(۱–۴، عدد کمتر بهتر است)",
+    "gpaUsScale": "(۰–۴.۰)",
     "months_one": "{{count}} ماه",
     "months_other": "{{count}} ماه",
     "unknown": "ثبت نشده",

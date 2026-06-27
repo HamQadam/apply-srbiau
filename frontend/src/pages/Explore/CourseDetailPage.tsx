@@ -12,6 +12,14 @@ import { formatCurrency, formatDate } from '../../lib/format';
 import { cn } from '../../lib/cn';
 import type { Course, CourseLanguageRequirement } from '../../types';
 
+// GPA scale note — German system (1 = best) vs US/Iran 4.0 system (4 = best)
+const GERMAN_SYSTEM_COUNTRIES = new Set(['Germany', 'Austria', 'Switzerland', 'Netherlands', 'Belgium']);
+function getGpaScaleNote(country: string | null | undefined, t: (k: string, opts?: { defaultValue: string }) => string): string {
+  if (!country) return '';
+  if (GERMAN_SYSTEM_COUNTRIES.has(country)) return t('courseDetail.gpaGermanScale', { defaultValue: '(1–4, lower is better)' });
+  return t('courseDetail.gpaUsScale', { defaultValue: '(0–4.0)' });
+}
+
 const getFreshnessState = (course: Course) => {
   const sourceDate = course.last_verified_at || course.updated_at || course.created_at;
   if (!sourceDate) return { key: 'unknown', date: null as string | null };
@@ -216,7 +224,10 @@ export function CourseDetailPage() {
                   <DataRow label={t('courseDetail.field')} value={course.field} />
                 )}
                 {course.gpa_minimum != null && (
-                  <DataRow label={t('courseDetail.gpa')} value={String(course.gpa_minimum)} />
+                  <DataRow
+                    label={t('courseDetail.gpa')}
+                    value={`${course.gpa_minimum} ${getGpaScaleNote(course.university_country, t)}`}
+                  />
                 )}
               </div>
               {course.deadline_notes && (

@@ -21,6 +21,7 @@ export function DashboardPage() {
   const [programs, setPrograms] = useState<TrackedProgram[]>([]);
   const [deadlines, setDeadlines] = useState<DeadlineItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [programPendingDelete, setProgramPendingDelete] = useState<TrackedProgram | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [showAllPrograms, setShowAllPrograms] = useState(false);
@@ -30,6 +31,8 @@ export function DashboardPage() {
   }, []);
 
   const loadData = async () => {
+    setLoading(true);
+    setLoadError(false);
     try {
       const [programsData, deadlinesData] = await Promise.all([
         trackerApi.listPrograms(),
@@ -48,7 +51,7 @@ export function DashboardPage() {
       setDeadlines(deadlinesData);
     } catch (err) {
       console.error('Failed to load dashboard:', err);
-      toast.error(t('dashboard.loadError'));
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -106,6 +109,31 @@ export function DashboardPage() {
 
   const visiblePrograms = showAllPrograms ? programs : programs.slice(0, INITIAL_VISIBLE);
   const hiddenCount = programs.length - INITIAL_VISIBLE;
+
+  // ── Error state ────────────────────────────────────────────
+  if (loadError) {
+    return (
+      <PageTransition>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="mt-16 flex flex-col items-center text-center max-w-sm mx-auto">
+            <div className="w-12 h-12 rounded-xl bg-status-danger/10 flex items-center justify-center mb-4" aria-hidden="true">
+              <svg className="w-6 h-6 text-status-danger" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+              </svg>
+            </div>
+            <p className="text-text-primary font-semibold">{t('dashboard.loadError')}</p>
+            <p className="mt-1 text-sm text-text-muted">{t('common.tryAgainHint')}</p>
+            <button
+              onClick={loadData}
+              className="mt-6 inline-flex items-center gap-2 px-5 py-2.5 bg-brand-primary text-white font-medium rounded-lg hover:bg-brand-primary/90 transition-colors text-sm"
+            >
+              {t('common.tryAgain')}
+            </button>
+          </div>
+        </div>
+      </PageTransition>
+    );
+  }
 
   // ── Loading state ──────────────────────────────────────────
   if (loading) {

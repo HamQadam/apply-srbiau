@@ -164,7 +164,7 @@ export function LoginPage() {
 
                 <div className="my-6 flex items-center gap-3">
                   <div className="h-px bg-border flex-1" />
-                  <div className="text-xs text-text-muted">OR</div>
+                  <div className="text-xs text-text-muted">{t('auth.or')}</div>
                   <div className="h-px bg-border flex-1" />
                 </div>
 

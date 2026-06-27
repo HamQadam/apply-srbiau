@@ -55,6 +55,7 @@ export function ExplorePage() {
   const [fields, setFields] = useState<Array<{ field: string; count: number }>>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [searchError, setSearchError] = useState(false);
   const [adding, setAdding] = useState<number | null>(null);
   const [initialLoadDone, setInitialLoadDone] = useState(false);
 
@@ -123,6 +124,7 @@ export function ExplorePage() {
 
   const searchCourses = async (append = false) => {
     append ? setLoadingMore(true) : setLoading(true);
+    if (!append) setSearchError(false);
 
     try {
       const deadlineBounds = getDeadlineBounds(deadlineRange);
@@ -143,7 +145,8 @@ export function ExplorePage() {
       setTotal(data.total);
     } catch (err) {
       console.error('Failed to search:', err);
-      toast.error(t('explore.searchError'));
+      if (!append) setSearchError(true);
+      else toast.error(t('explore.searchError'));
     } finally {
       setLoading(false);
       setLoadingMore(false);
@@ -159,8 +162,19 @@ export function ExplorePage() {
     setAdding(courseId);
     try {
       await trackerApi.addProgram({ course_id: courseId });
-      toast.success(t('explore.added'));
-      navigate('/dashboard');
+      toast.success(
+        <span>
+          {t('explore.added')}{' '}
+          <a
+            href="/dashboard"
+            onClick={(e) => { e.preventDefault(); navigate('/dashboard'); }}
+            className="underline font-semibold"
+          >
+            {t('explore.goToTracker')}
+          </a>
+        </span>,
+        { duration: 4000 }
+      );
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('explore.addError'));
     } finally {
@@ -359,6 +373,22 @@ export function ExplorePage() {
         {loading ? (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             {[1, 2, 3, 4, 5, 6].map((item) => <Skeleton key={item} className="h-64 rounded-xl" />)}
+          </div>
+        ) : searchError ? (
+          <div className="rounded-xl border border-border bg-surface px-4 py-16 text-center">
+            <div className="w-12 h-12 rounded-xl bg-status-danger/10 flex items-center justify-center mx-auto mb-4" aria-hidden="true">
+              <svg className="w-6 h-6 text-status-danger" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+              </svg>
+            </div>
+            <h3 className="text-base font-semibold text-text-primary mb-1">{t('explore.searchErrorTitle')}</h3>
+            <p className="text-sm text-text-muted mb-5">{t('common.tryAgainHint')}</p>
+            <button
+              onClick={() => searchCourses(false)}
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-brand-primary text-white font-medium rounded-lg hover:bg-brand-primary/90 transition-colors text-sm"
+            >
+              {t('common.tryAgain')}
+            </button>
           </div>
         ) : courses.length === 0 ? (
           <div className="rounded-xl border border-border bg-surface px-4 py-16 text-center">

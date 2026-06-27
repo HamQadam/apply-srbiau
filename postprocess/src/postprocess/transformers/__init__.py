@@ -11,10 +11,12 @@ and returns a ParsedItem that carries:
 from .base import ParsedItem, MISSING
 from .daad import DaadTransformer
 from .studyinnl import StudyInNLTransformer
+from .swedenua import SwedenUATransformer
 
 _REGISTRY: dict[str, type] = {
     "daad": DaadTransformer,
     "studyinnl": StudyInNLTransformer,
+    "swedenua": SwedenUATransformer,
 }
 
 
@@ -27,4 +29,8 @@ def get_transformer(source: str):
     return cls()
 
 
-__all__ = ["ParsedItem", "MISSING", "DaadTransformer", "StudyInNLTransformer", "get_transformer"]
+__all__ = [
+    "ParsedItem", "MISSING",
+    "DaadTransformer", "StudyInNLTransformer", "SwedenUATransformer",
+    "get_transformer",
+]

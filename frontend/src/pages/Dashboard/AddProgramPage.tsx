@@ -101,12 +101,20 @@ export function AddProgramPage() {
           <p className="mt-1.5 text-sm text-text-secondary">{t('addProgram.subtitle')}</p>
         </div>
 
-        {/* Mode toggle — tabs, not buttons */}
-        <div className="flex border border-border rounded-lg overflow-hidden mb-6 bg-elevated">
+        {/* Mode toggle — proper tab semantics */}
+        <div
+          role="tablist"
+          aria-label={t('addProgram.modeLabel', 'Add mode')}
+          className="flex border border-border rounded-lg overflow-hidden mb-6 bg-elevated"
+        >
           {(['search', 'custom'] as const).map(m => (
             <button
               key={m}
               type="button"
+              role="tab"
+              aria-selected={mode === m}
+              aria-controls={`addprogram-panel-${m}`}
+              id={`addprogram-tab-${m}`}
               onClick={() => setMode(m)}
               className={cn(
                 'flex-1 py-2.5 text-sm font-medium transition-colors',
@@ -122,7 +130,12 @@ export function AddProgramPage() {
 
           {/* ── Search mode ── */}
           {mode === 'search' && (
-            <div className="rounded-xl border border-border bg-surface p-5">
+            <div
+              role="tabpanel"
+              id="addprogram-panel-search"
+              aria-labelledby="addprogram-tab-search"
+              className="rounded-xl border border-border bg-surface p-5"
+            >
               <div className="relative">
                 <svg className="absolute inset-y-0 start-3 my-auto w-4 h-4 text-text-muted pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
@@ -211,7 +224,12 @@ export function AddProgramPage() {
 
           {/* ── Custom mode ── */}
           {mode === 'custom' && (
-            <div className="rounded-xl border border-border bg-surface p-5 space-y-4">
+            <div
+              role="tabpanel"
+              id="addprogram-panel-custom"
+              aria-labelledby="addprogram-tab-custom"
+              className="rounded-xl border border-border bg-surface p-5 space-y-4"
+            >
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <label className="block text-xs font-medium text-text-secondary mb-1.5">

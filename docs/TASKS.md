@@ -86,7 +86,13 @@ This file turns the proposal into concrete engineering work. Keep it updated as 
 
 ## Phase 7: Country Expansion
 
-- [ ] Add Sweden source plan.
+- [X] Add Sweden source plan.
+      Source: universityadmissions.se (UHR — Swedish Council for Higher Education)
+      Crawler: crawlers/swedenua_ingestor/swedenua_crawler.py  (source_name="swedenua")
+      Transformer: postprocess/src/postprocess/transformers/swedenua.py
+      API: POST /intl/api/sok  (session-based JSON API, XSSI-protected)
+      ~1300+ programmes per semester across 39 Swedish universities
+      Run: make crawl-sweden  |  crawl swedenua  |  crawl swedenua --semester-ids 27 28
 - [ ] Add Finland source plan.
 - [ ] Add Denmark source plan.
 - [ ] Add France source plan.
